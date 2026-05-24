@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WealthOS">
+<meta name="theme-color" content="#050608">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>WealthOS — Financial Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --void:#050608;--surface:#0a0c12;--lift:#111420;--rim:#1c2035;
+  --wire:rgba(255,255,255,0.07);--wire2:rgba(255,255,255,0.12);
+  --text:#eceef5;--sub:#7c8299;--dim:#3d4259;
+  --green:#00e5a0;--gd:rgba(0,229,160,0.12);
+  --red:#ff5370;--rd:rgba(255,83,112,0.12);
+  --amber:#ffb930;--ad:rgba(255,185,48,0.10);
+  --blue:#4d9fff;--bd:rgba(77,159,255,0.10);
+  --purple:#9d7aff;--pd:rgba(157,122,255,0.10);
+  --pink:#ff6eb4;--pkd:rgba(255,110,180,0.10);
+  --syne:'Syne',sans-serif;--mono:'Space Mono',monospace;--body:'DM Sans',sans-serif;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--void);color:var(--text);font-family:var(--body);font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden}
+
+/* ── SCREENS ── */
+.screen{display:none;height:100vh;height:100dvh;overflow:hidden;flex-direction:column}
+.screen.active{display:flex}
+
+/* ── LOADING ── */
+#screen-loading{align-items:center;justify-content:center;background:var(--void)}
+.loader-logo{font-family:var(--syne);font-size:32px;font-weight:800;letter-spacing:-.03em;margin-bottom:16px}
+.loader-logo span{color:var(--green)}
+.loader-bar{width:120px;height:2px;background:var(--rim);border-radius:1px;overflow:hidden}
+.loader-fill{height:100%;background:var(--green);border-radius:1px;animation:load 1.5s ease-in-out infinite}
+@keyframes load{0%{width:0;margin-left:0}50%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
+
+/* ── AUTH ── */
+#screen-auth{align-items:center;justify-content:center;background:var(--void);padding:24px;overflow-y:auto}
+.auth-box{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--wire2);border-radius:20px;padding:32px 28px}
+.auth-logo{font-family:var(--syne);font-size:26px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px}
+.auth-logo span{color:var(--green)}
+.auth-tagline{font-size:13px;color:var(--sub);margin-bottom:28px}
+.auth-tabs{display:flex;background:var(--lift);border-radius:8px;padding:3px;margin-bottom:24px;gap:3px}
+.auth-tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--sub);transition:all .15s;border:none;background:none}
+.auth-tab.active{background:var(--green);color:#000;font-weight:700}
+.inp-group{margin-bottom:14px}
+.inp-label{font-family:var(--mono);font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+.inp{background:var(--lift);border:1px solid var(--wire2);border-radius:8px;padding:12px 14px;color:var(--text);font-family:var(--mono);font-size:12px;width:100%;outline:none;transition:border .15s;-webkit-appearance:none}
+.inp:focus{border-color:var(--green)}
+.inp::placeholder{color:var(--dim)}
+.btn{font-family:var(--mono);font-size:12px;padding:14px 20px;border-radius:10px;border:none;cursor:pointer;width:100%;font-weight:700;transition:all .15s;letter-spacing:.04em}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--green);color:#000;margin-top:6px}
+.btn-primary:hover{background:#00cfaa}
+.btn-outline{background:transparent;border:1px solid var(--wire2);color:var(--sub);margin-top:8px}
+.auth-divider{text-align:center;font-size:11px;color:var(--dim);margin:14px 0}
+.auth-error{background:var(--rd);border:1px solid rgba(255,83,112,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px;display:none}
+.auth-success{background:var(--gd);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
+
+/* ── ONBOARDING ── */
+#screen-onboarding{background:var(--void);overflow-y:auto;padding:24px}
+.ob-header{padding-top:calc(var(--safe-top) + 12px);margin-bottom:24px;text-align:center}
+.ob-title{font-family:var(--syne);font-size:22px;font-weight:800;margin-bottom:6px}
+.ob-sub{font-size:13px;color:var(--sub)}
+.ob-step{background:var(--surface);border:1px solid var(--wire);border-radius:14px;padding:20px;margin-bottom:14px}
+.ob-step-num{font-family:var(--mono);font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.ob-step-title{font-family:var(--syne);font-size:15px;font-weight:700;margin-bottom:12px}
+.ob-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── APP SHELL ── */
+#screen-app{background:var(--void)}
+.topbar{background:var(--surface);border-bottom:1px solid var(--wire);padding:calc(var(--safe-top) + 10px) 16px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-logo{font-family:var(--syne);font-size:16px;font-weight:800}
+.topbar-logo span{color:var(--green)}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--lift);border:1px solid var(--wire);border-radius:20px;padding:4px 10px 4px 4px;cursor:pointer}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-weight:700;font-size:10px;color:#000}
+.user-name{font-family:var(--mono);font-size:10px;color:var(--sub);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--wire);background:var(--lift);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .15s}
+.icon-btn:hover{border-color:var(--green)}
+
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 calc(var(--safe-bottom) + 70px)}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--wire);display:flex;padding-bottom:var(--safe-bottom);z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;transition:color .15s;color:var(--dim);border:none;background:none}
+.nav-btn.active{color:var(--green)}
+.nav-icon-wrap{width:34px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:3px;transition:background .15s}
+.nav-btn.active .nav-icon-wrap{background:var(--gd)}
+.nav-icon{font-size:15px}
+.nav-label{font-family:var(--mono);font-size:8px;letter-spacing:.04em}
+
+/* ── PANELS ── */
+.panel{display:none;padding:14px}
+.panel.active{display:block}
+
+/* ── CARDS & KPIs ── */
+.card{background:var(--lift);border:1px solid var(--wire);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:var(--lift);border:1px solid var(--wire);border-radius:12px;padding:12px 14px;overflow:hidden;position:relative}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.kpi-l{font-family:var(--mono);font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.kpi-v{font-family:var(--syne);font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.kpi-s{font-size:10px;color:var(--sub);margin-top:3px}
+.sec-title{font-family:var(--syne);font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.chart-box{background:var(--lift);border:1px solid var(--wire);border-radius:14px;padding:14px;margin-bottom:12px}
+
+/* ── ALERTS ── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:10px;font-size:12px;line-height:1.5}
+.alert.warn{background:var(--ad);border:1px solid rgba(255,185,48,.2)}
+.alert.good{background:var(--gd);border:1px solid rgba(0,229,160,.2)}
+.alert.info{background:var(--bd);border:1px solid rgba(77,159,255,.2)}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.alert strong{color:var(--text)}
+
+/* ── PILLS ── */
+.pill{display:inline-block;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700}
+.p-g{background:var(--gd);color:var(--green)} .p-r{background:var(--rd);color:var(--red)}
+.p-a{background:var(--ad);color:var(--amber)} .p-b{background:var(--bd);color:var(--blue)}
+.p-p{background:var(--pd);color:var(--purple)}
+
+/* ── PROGRESS ── */
+.prog-row{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.prog-lbl{font-size:11px;color:var(--sub);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog-track{width:80px;height:4px;background:var(--rim);border-radius:2px;overflow:hidden;flex-shrink:0}
+.prog-fill{height:100%;border-radius:2px;transition:width 1s}
+.prog-val{font-family:var(--mono);font-size:10px;color:var(--text);min-width:30px;text-align:right}
+
+/* ── LOAN / HOLDING ROWS ── */
+.list-item{padding:11px 0;border-bottom:1px solid var(--wire)}
+.list-item:last-child{border-bottom:none}
+.li-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.li-name{font-size:12px;font-weight:500}
+.li-right{text-align:right}
+.li-val{font-family:var(--mono);font-size:12px;font-weight:700}
+.li-sub{font-family:var(--mono);font-size:10px;color:var(--sub)}
+.li-bar{height:3px;background:var(--rim);border-radius:2px;overflow:hidden;margin-top:4px}
+.li-fill{height:100%;border-radius:2px}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:1.5px dashed var(--wire2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--lift);margin-bottom:10px}
+.upload-zone:active,.upload-zone.drag{border-color:var(--green);background:var(--gd)}
+.upload-icon{font-size:26px;margin-bottom:6px}
+.upload-title{font-family:var(--syne);font-size:13px;font-weight:600;margin-bottom:3px}
+.upload-sub{font-size:11px;color:var(--sub)}
+
+/* ── ADMIN PANEL ── */
+.admin-stat{background:var(--lift);border:1px solid var(--wire);border-radius:12px;padding:14px;text-align:center}
+.admin-stat-v{font-family:var(--syne);font-size:24px;font-weight:800;color:var(--green)}
+.admin-stat-l{font-family:var(--mono);font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--wire)}
+.user-row:last-child{border-bottom:none}
+.user-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-weight:700;font-size:12px;color:white;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-email{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-meta{font-family:var(--mono);font-size:10px;color:var(--sub)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);border:1px solid var(--wire2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;padding-bottom:calc(var(--safe-bottom) + 20px)}
+.modal-handle{width:36px;height:4px;background:var(--rim);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-family:var(--syne);font-size:16px;font-weight:700;margin-bottom:16px}
+.modal-close{position:absolute;top:20px;right:20px;font-size:18px;cursor:pointer;color:var(--sub)}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:calc(var(--safe-top) + 70px);left:50%;transform:translateX(-50%);background:var(--lift);border:1px solid rgba(0,229,160,.3);color:var(--green);font-family:var(--mono);font-size:11px;padding:10px 18px;border-radius:8px;z-index:999;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.4);transition:opacity .3s}
+.toast.hide{opacity:0}
+
+/* Scrollbar */
+::-webkit-scrollbar{display:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.panel.active>*{animation:fadeUp .25s ease both}
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOADING ══════════ -->
+<div class="screen active" id="screen-loading">
+  <div class="loader-logo">Wealth<span>OS</span></div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+</div>
+
+<!-- ══════════ AUTH ══════════ -->
+<div class="screen" id="screen-auth">
+  <div class="auth-box">
+    <div class="auth-logo">Wealth<span>OS</span></div>
+    <div class="auth-tagline">Your personal financial intelligence platform</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign in</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Sign up</button>
+    </div>
+
+    <div id="auth-error" class="auth-error"></div>
+    <div id="auth-success" class="auth-success"></div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="inp-group">
+        <label class="inp-label">Email</label>
+        <input class="inp" type="email" id="login-email" placeholder="you@email.com" autocomplete="email">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Password</label>
+        <input class="inp" type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">Sign in →</button>
+      <div class="auth-divider">or</div>
+      <button class="btn btn-outline" onclick="handleGoogleAuth()">🔵 Continue with Google</button>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" style="display:none">
+      <div class="inp-group">
+        <label class="inp-label">Full name</label>
+        <input class="inp" type="text" id="signup-name" placeholder="Abhishek Mishra" autocomplete="name">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Email</label>
+        <input class="inp" type="email" id="signup-email" placeholder="you@email.com" autocomplete="email">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Password</label>
+        <input class="inp" type="password" id="signup-password" placeholder="min 8 characters" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" onclick="handleSignup()">Create account →</button>
+      <div class="auth-divider">or</div>
+      <button class="btn btn-outline" onclick="handleGoogleAuth()">🔵 Continue with Google</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ONBOARDING ══════════ -->
+<div class="screen" id="screen-onboarding" style="overflow-y:auto">
+  <div class="ob-header">
+    <div style="font-size:36px;margin-bottom:10px">👋</div>
+    <div class="ob-title">Welcome to WealthOS</div>
+    <div class="ob-sub">Tell us about your finances to get started</div>
+  </div>
+
+  <div class="ob-step">
+    <div class="ob-step-num">Step 1 of 3 — Income & Basics</div>
+    <div class="ob-step-title">Monthly income & expenses</div>
+    <div class="ob-grid">
+      <div class="inp-group">
+        <label class="inp-label">Monthly income (₹)</label>
+        <input class="inp" type="number" id="ob-income" placeholder="143000">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Monthly rent (₹)</label>
+        <input class="inp" type="number" id="ob-rent" placeholder="25000">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Living expenses (₹)</label>
+        <input class="inp" type="number" id="ob-living" placeholder="25000">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Monthly SIP (₹)</label>
+        <input class="inp" type="number" id="ob-sip" placeholder="40000">
+      </div>
+    </div>
+  </div>
+
+  <div class="ob-step">
+    <div class="ob-step-num">Step 2 of 3 — Portfolio</div>
+    <div class="ob-step-title">Current investments</div>
+    <div class="ob-grid">
+      <div class="inp-group">
+        <label class="inp-label">Portfolio value (₹)</label>
+        <input class="inp" type="number" id="ob-portfolio" placeholder="413066">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Total invested (₹)</label>
+        <input class="inp" type="number" id="ob-invested" placeholder="365449">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">CIBIL score</label>
+        <input class="inp" type="number" id="ob-cibil" placeholder="776" min="300" max="900">
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Total debt (₹)</label>
+        <input class="inp" type="number" id="ob-debt" placeholder="801092">
+      </div>
+    </div>
+  </div>
+
+  <div class="ob-step">
+    <div class="ob-step-num">Step 3 of 3 — Goals</div>
+    <div class="ob-step-title">What are you working towards?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="ob-goals-grid">
+      <div class="ob-goal-chip" onclick="toggleGoal(this,'debt')" style="background:var(--rd);border:1px solid rgba(255,83,112,.2);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:20px">◍</div><div style="font-size:11px;margin-top:4px">Clear debt</div>
+      </div>
+      <div class="ob-goal-chip" onclick="toggleGoal(this,'house')" style="background:var(--bd);border:1px solid rgba(77,159,255,.2);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:20px">⌂</div><div style="font-size:11px;margin-top:4px">Buy a house</div>
+      </div>
+      <div class="ob-goal-chip" onclick="toggleGoal(this,'wedding')" style="background:var(--pkd);border:1px solid rgba(255,110,180,.2);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:20px">◇</div><div style="font-size:11px;margin-top:4px">Wedding fund</div>
+      </div>
+      <div class="ob-goal-chip" onclick="toggleGoal(this,'retirement')" style="background:var(--pd);border:1px solid rgba(157,122,255,.2);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:20px">◎</div><div style="font-size:11px;margin-top:4px">Retire early</div>
+      </div>
+      <div class="ob-goal-chip" onclick="toggleGoal(this,'emergency')" style="background:var(--gd);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:20px">⊕</div><div style="font-size:11px;margin-top:4px">Emergency fund</div>
+      </div>
+      <div class="ob-goal-chip" onclick="toggleGoal(this,'sip')" style="background:var(--ad);border:1px solid rgba(255,185,48,.2);border-radius:8px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:20px">◈</div><div style="font-size:11px;margin-top:4px">Grow SIP</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" style="margin-bottom:32px" onclick="completeOnboarding()">Start tracking my wealth →</button>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div class="screen" id="screen-app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">W<span>OS</span></div>
+      <div class="user-chip" onclick="openModal('modal-profile')">
+        <div class="user-avatar" id="topUserAvatar">?</div>
+        <div class="user-name" id="topUserName">Loading...</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="icon-btn" onclick="showPanel('upload')" title="Upload report">⊕</div>
+      <div class="icon-btn" id="adminBtn" onclick="showPanel('admin')" title="Admin" style="display:none">⚙</div>
+      <div class="icon-btn" onclick="handleSignOut()" title="Sign out">→</div>
+    </div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll-area" id="appScroll">
+
+    <!-- ── HOME ── -->
+    <div class="panel active" id="panel-home">
+      <div id="home-alerts"></div>
+
+      <!-- Score hero -->
+      <div class="card" style="background:linear-gradient(135deg,var(--lift) 0%,#0d1525 100%);border:1px solid var(--wire2)">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+            <svg width="80" height="80" viewBox="0 0 80 80" role="img" aria-label="Financial health score gauge">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#1c2035" stroke-width="6"/>
+              <circle cx="40" cy="40" r="32" fill="none" stroke="url(#sg2)" stroke-width="6"
+                id="scoreArc" stroke-dasharray="201" stroke-dashoffset="92"
+                stroke-linecap="round" transform="rotate(-90 40 40)"/>
+              <defs><linearGradient id="sg2" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#00e5a0"/><stop offset="100%" stop-color="#4d9fff"/>
+              </linearGradient></defs>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-family:var(--syne);font-size:22px;font-weight:800;color:var(--amber)" id="scoreNum">—</div>
+              <div style="font-family:var(--mono);font-size:8px;color:var(--sub)">/ 100</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:var(--syne);font-size:15px;font-weight:700;color:var(--amber)" id="scoreVerdict">Loading...</div>
+            <div style="font-size:11px;color:var(--sub);margin:4px 0 8px" id="scoreDesc">Calculating your financial health</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--green);background:var(--gd);padding:3px 8px;border-radius:4px;display:inline-block" id="scoreTarget">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="home-kpis"></div>
+
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:8px">Monthly cashflow</div>
+        <div style="height:150px;position:relative"><canvas id="homeCashflow"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">Goals</div>
+        <div id="home-goals"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:0">
+        <div class="sec-title">Quick actions</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn btn-outline" style="padding:12px;font-size:10px" onclick="showPanel('upload')">⊕ Upload CIBIL</button>
+          <button class="btn btn-outline" style="padding:12px;font-size:10px" onclick="openModal('modal-addloan')">+ Add loan</button>
+          <button class="btn btn-outline" style="padding:12px;font-size:10px" onclick="showPanel('debt')">◍ View debts</button>
+          <button class="btn btn-outline" style="padding:12px;font-size:10px" onclick="showPanel('portfolio')">◲ Portfolio</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEBT ── -->
+    <div class="panel" id="panel-debt">
+      <div class="kpi-grid" id="debt-kpis"></div>
+      <div class="card">
+        <div class="sec-title">Active loans <button onclick="openModal('modal-addloan')" style="font-family:var(--mono);font-size:10px;background:var(--gd);color:var(--green);border:none;border-radius:4px;padding:3px 8px;cursor:pointer">+ Add</button></div>
+        <div id="debt-list"></div>
+      </div>
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:8px">Payoff projection</div>
+        <div style="height:190px;position:relative"><canvas id="debtChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── PORTFOLIO ── -->
+    <div class="panel" id="panel-portfolio">
+      <div class="kpi-grid" id="port-kpis"></div>
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:8px">Asset mix</div>
+        <div style="height:150px;position:relative"><canvas id="portPie"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="sec-title">Holdings <button onclick="openModal('modal-addholding')" style="font-family:var(--mono);font-size:10px;background:var(--gd);color:var(--green);border:none;border-radius:4px;padding:3px 8px;cursor:pointer">+ Add</button></div>
+        <div id="port-list"></div>
+      </div>
+    </div>
+
+    <!-- ── GOALS ── -->
+    <div class="panel" id="panel-goals">
+      <div class="alert info">
+        <div class="alert-icon">ℹ</div>
+        <div>Your 10-year projection based on current SIP and expected <strong>13.5% CAGR</strong>.</div>
+      </div>
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:8px">10-year corpus</div>
+        <div style="height:180px;position:relative"><canvas id="projChart"></canvas></div>
+      </div>
+      <div class="kpi-grid-3" id="proj-milestones"></div>
+      <div class="card">
+        <div class="sec-title">My goals <button onclick="openModal('modal-addgoal')" style="font-family:var(--mono);font-size:10px;background:var(--gd);color:var(--green);border:none;border-radius:4px;padding:3px 8px;cursor:pointer">+ Add</button></div>
+        <div id="goals-list"></div>
+      </div>
+    </div>
+
+    <!-- ── UPLOAD ── -->
+    <div class="panel" id="panel-upload">
+      <div class="upload-zone" onclick="triggerUpload('cibil')" id="cibilZone">
+        <div class="upload-icon">📊</div>
+        <div class="upload-title">CIBIL Report</div>
+        <div class="upload-sub">PDF · Tap to upload · Monthly</div>
+        <input type="file" id="upload-cibil" accept=".pdf" style="display:none" onchange="handleUpload(event,'CIBIL')">
+      </div>
+      <div class="upload-zone" onclick="triggerUpload('holding')" id="holdingZone">
+        <div class="upload-icon">📈</div>
+        <div class="upload-title">Holdings Statement</div>
+        <div class="upload-sub">Excel / PDF · MF + Stocks</div>
+        <input type="file" id="upload-holding" accept=".xlsx,.pdf,.csv" style="display:none" onchange="handleUpload(event,'Holdings')">
+      </div>
+      <div class="card">
+        <div class="sec-title">Manual update</div>
+        <div style="display:grid;gap:10px">
+          <div class="inp-group" style="margin-bottom:0">
+            <label class="inp-label">CIBIL score</label>
+            <input class="inp" type="number" id="m-cibil" placeholder="776">
+          </div>
+          <div class="inp-group" style="margin-bottom:0">
+            <label class="inp-label">Portfolio value (₹)</label>
+            <input class="inp" type="number" id="m-port" placeholder="413066">
+          </div>
+          <div class="inp-group" style="margin-bottom:0">
+            <label class="inp-label">Monthly SIP (₹)</label>
+            <input class="inp" type="number" id="m-sip" placeholder="40148">
+          </div>
+          <div class="inp-group" style="margin-bottom:0">
+            <label class="inp-label">Monthly income (₹)</label>
+            <input class="inp" type="number" id="m-income" placeholder="143000">
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="saveManualUpdate()">Save update</button>
+      </div>
+      <div class="card">
+        <div class="sec-title">Upload history</div>
+        <div id="upload-history"></div>
+      </div>
+    </div>
+
+    <!-- ── ADMIN ── -->
+    <div class="panel" id="panel-admin">
+      <div class="alert warn">
+        <div class="alert-icon">⚙</div>
+        <div><strong>Admin panel</strong> — only visible to you. All user data is private.</div>
+      </div>
+      <div class="kpi-grid-3" id="admin-stats"></div>
+      <div class="card">
+        <div class="sec-title">All users</div>
+        <div id="admin-users"></div>
+      </div>
+    </div>
+
+  </div><!-- end scroll area -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="showPanel('home')" id="nav-home">
+      <div class="nav-icon-wrap"><div class="nav-icon">⬡</div></div>
+      <div class="nav-label">HOME</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('debt')" id="nav-debt">
+      <div class="nav-icon-wrap"><div class="nav-icon">◍</div></div>
+      <div class="nav-label">DEBT</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('portfolio')" id="nav-portfolio">
+      <div class="nav-icon-wrap"><div class="nav-icon">◲</div></div>
+      <div class="nav-label">PORTFOLIO</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('goals')" id="nav-goals">
+      <div class="nav-icon-wrap"><div class="nav-icon">◎</div></div>
+      <div class="nav-label">GOALS</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('upload')" id="nav-upload">
+      <div class="nav-icon-wrap"><div class="nav-icon">⊕</div></div>
+      <div class="nav-label">UPDATE</div>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+
+<!-- Profile modal -->
+<div class="modal-overlay" id="modal-profile" onclick="closeModal('modal-profile')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">My profile</div>
+    <div id="profile-content"></div>
+    <button class="btn btn-outline" style="margin-top:14px" onclick="handleSignOut()">Sign out</button>
+    <button class="btn btn-outline" onclick="closeModal('modal-profile')">Close</button>
+  </div>
+</div>
+
+<!-- Add loan modal -->
+<div class="modal-overlay" id="modal-addloan" onclick="closeModal('modal-addloan')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add loan</div>
+    <div class="inp-group"><label class="inp-label">Lender name</label><input class="inp" id="al-lender" placeholder="HDFC Bank"></div>
+    <div class="inp-group"><label class="inp-label">Loan type</label>
+      <select class="inp" id="al-type"><option>Personal Loan</option><option>Home Loan</option><option>Car Loan</option><option>Credit Card</option><option>Education Loan</option><option>Consumer Loan</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="inp-group"><label class="inp-label">Balance (₹)</label><input class="inp" id="al-balance" type="number" placeholder="100000"></div>
+      <div class="inp-group"><label class="inp-label">EMI (₹)</label><input class="inp" id="al-emi" type="number" placeholder="5000"></div>
+      <div class="inp-group"><label class="inp-label">Interest rate (%)</label><input class="inp" id="al-rate" type="number" placeholder="12.5" step="0.1"></div>
+      <div class="inp-group"><label class="inp-label">Close date</label><input class="inp" id="al-close" type="month"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveLoan()">Add loan</button>
+    <button class="btn btn-outline" onclick="closeModal('modal-addloan')">Cancel</button>
+  </div>
+</div>
+
+<!-- Add holding modal -->
+<div class="modal-overlay" id="modal-addholding" onclick="closeModal('modal-addholding')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add holding</div>
+    <div class="inp-group"><label class="inp-label">Fund / Stock name</label><input class="inp" id="ah-name" placeholder="Canara Robeco ELSS"></div>
+    <div class="inp-group"><label class="inp-label">Type</label>
+      <select class="inp" id="ah-type"><option>MF</option><option>ETF</option><option>Stock</option><option>FD</option><option>Gold</option><option>Other</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="inp-group"><label class="inp-label">Invested (₹)</label><input class="inp" id="ah-inv" type="number" placeholder="50000"></div>
+      <div class="inp-group"><label class="inp-label">Current value (₹)</label><input class="inp" id="ah-val" type="number" placeholder="55000"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveHolding()">Add holding</button>
+    <button class="btn btn-outline" onclick="closeModal('modal-addholding')">Cancel</button>
+  </div>
+</div>
+
+<!-- Add goal modal -->
+<div class="modal-overlay" id="modal-addgoal" onclick="closeModal('modal-addgoal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add goal</div>
+    <div class="inp-group"><label class="inp-label">Goal name</label><input class="inp" id="ag-name" placeholder="Wedding fund"></div>
+    <div class="inp-group"><label class="inp-label">Category</label>
+      <select class="inp" id="ag-cat"><option value="debt">Clear debt</option><option value="wedding">Wedding</option><option value="house">Buy house</option><option value="emergency">Emergency fund</option><option value="sip">Grow SIP</option><option value="retirement">Retirement</option><option value="other">Other</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="inp-group"><label class="inp-label">Target amount (₹)</label><input class="inp" id="ag-target" type="number" placeholder="3500000"></div>
+      <div class="inp-group"><label class="inp-label">Target date</label><input class="inp" id="ag-date" type="month"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveGoal()">Add goal</button>
+    <button class="btn btn-outline" onclick="closeModal('modal-addgoal')">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ═══════════ CONFIG — REPLACE THESE WITH YOUR SUPABASE VALUES ═══════════
+const SUPABASE_URL = 'https://jpytoxxkkbzdrdoxuyoh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_7h1-nZzSP1LVvhyK9VLKrQ_eulVcxmK';
+
+// ═══════════ INIT SUPABASE ═══════════
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ═══════════ STATE ═══════════
+let currentUser = null;
+let userProfile = null;
+let latestSnapshot = null;
+let userLoans = [];
+let userHoldings = [];
+let userGoals = [];
+let selectedGoals = [];
+
+// ═══════════ HELPERS ═══════════
+const fmt = v => v>=10000000?'₹'+(v/10000000).toFixed(2)+'Cr':v>=100000?'₹'+(v/100000).toFixed(1)+'L':'₹'+Math.round(v).toLocaleString('en-IN');
+const initials = name => name ? name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() : '?';
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const panel = document.getElementById('panel-'+id);
+  const nav = document.getElementById('nav-'+id);
+  if(panel) panel.classList.add('active');
+  if(nav) nav.classList.add('active');
+  document.getElementById('appScroll').scrollTop = 0;
+  if(id==='home') renderHome();
+  if(id==='debt') renderDebt();
+  if(id==='portfolio') renderPortfolio();
+  if(id==='goals') renderGoals();
+  if(id==='upload') renderUpload();
+  if(id==='admin') renderAdmin();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function showToast(msg, isError=false) {
+  let t = document.querySelector('.toast');
+  if(t) t.remove();
+  t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  if(isError) t.style.borderColor = 'rgba(255,83,112,.4)';
+  if(isError) t.style.color = 'var(--red)';
+  document.body.appendChild(t);
+  setTimeout(()=>{t.classList.add('hide');setTimeout(()=>t.remove(),400);},2800);
+}
+
+function showAuthMsg(type, msg) {
+  ['auth-error','auth-success'].forEach(id=>{ const el=document.getElementById(id); el.style.display='none'; el.textContent=''; });
+  const el = document.getElementById(type==='error'?'auth-error':'auth-success');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ═══════════ AUTH ═══════════
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='login'?0:1)));
+  document.getElementById('login-form').style.display = tab==='login'?'block':'none';
+  document.getElementById('signup-form').style.display = tab==='signup'?'block':'none';
+  document.getElementById('auth-error').style.display='none';
+  document.getElementById('auth-success').style.display='none';
+}
+
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if(!email||!password){ showAuthMsg('error','Please enter email and password.'); return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error) showAuthMsg('error', error.message);
+}
+
+async function handleSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  if(!name||!email||!password){ showAuthMsg('error','Please fill all fields.'); return; }
+  if(password.length < 8){ showAuthMsg('error','Password must be at least 8 characters.'); return; }
+  const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name } } });
+  if(error) showAuthMsg('error', error.message);
+  else showAuthMsg('success', 'Account created! Check your email to verify, then sign in.');
+}
+
+async function handleGoogleAuth() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if(error) showAuthMsg('error', error.message);
+}
+
+async function handleSignOut() {
+  await sb.auth.signOut();
+  currentUser = null; userProfile = null;
+  showScreen('auth');
+}
+
+// ═══════════ ONBOARDING ═══════════
+function toggleGoal(el, goal) {
+  el.style.opacity = selectedGoals.includes(goal) ? '0.5' : '1';
+  el.style.transform = selectedGoals.includes(goal) ? 'scale(1)' : 'scale(1.04)';
+  if(selectedGoals.includes(goal)) selectedGoals = selectedGoals.filter(g=>g!==goal);
+  else selectedGoals.push(goal);
+}
+
+async function completeOnboarding() {
+  const income = parseInt(document.getElementById('ob-income').value) || 0;
+  const rent = parseInt(document.getElementById('ob-rent').value) || 0;
+  const living = parseInt(document.getElementById('ob-living').value) || 0;
+  const sip = parseInt(document.getElementById('ob-sip').value) || 0;
+  const portfolio = parseInt(document.getElementById('ob-portfolio').value) || 0;
+  const invested = parseInt(document.getElementById('ob-invested').value) || 0;
+  const cibil = parseInt(document.getElementById('ob-cibil').value) || 0;
+  const debt = parseInt(document.getElementById('ob-debt').value) || 0;
+
+  const today = new Date();
+  const month = today.toLocaleString('en-IN',{month:'long',year:'numeric'});
+
+  // Save initial snapshot
+  const { error: snErr } = await sb.from('snapshots').upsert({
+    user_id: currentUser.id,
+    month,
+    monthly_income: income,
+    rent,
+    living_expenses: living,
+    portfolio_value: portfolio,
+    total_invested: invested,
+    monthly_sip: sip,
+    total_debt: debt,
+    cibil_score: cibil,
+    health_score: calcHealthScore(cibil, debt, income, sip),
+  });
+
+  // Save goals
+  for(const g of selectedGoals) {
+    await sb.from('goals').insert({ user_id: currentUser.id, name: g.charAt(0).toUpperCase()+g.slice(1)+' goal', category: g });
+  }
+
+  if(snErr) { showToast('Error saving data: '+snErr.message, true); return; }
+
+  latestSnapshot = { monthly_income:income, rent, living_expenses:living, portfolio_value:portfolio, total_invested:invested, monthly_sip:sip, total_debt:debt, cibil_score:cibil, health_score:calcHealthScore(cibil,debt,income,sip) };
+  await loadUserData();
+  showScreen('app');
+  showToast('Welcome to WealthOS! 🎉');
+}
+
+// ═══════════ DATA LOADING ═══════════
+async function loadUserData() {
+  if(!currentUser) return;
+
+  // Load profile
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  userProfile = profile;
+
+  // Update topbar
+  if(profile) {
+    document.getElementById('topUserAvatar').textContent = initials(profile.full_name || profile.email);
+    document.getElementById('topUserName').textContent = (profile.full_name || profile.email).split(' ')[0];
+  }
+
+  // Show admin button if admin
+  if(profile?.role === 'admin') document.getElementById('adminBtn').style.display = 'flex';
+
+  // Load latest snapshot
+  const { data: snaps } = await sb.from('snapshots').select('*').eq('user_id', currentUser.id).order('snapshot_date', {ascending:false}).limit(1);
+  latestSnapshot = snaps?.[0] || null;
+
+  // Load loans
+  const { data: loans } = await sb.from('loans').select('*').eq('user_id', currentUser.id).eq('is_active', true).order('interest_rate', {ascending:false});
+  userLoans = loans || [];
+
+  // Load holdings
+  const { data: holdings } = await sb.from('holdings').select('*').eq('user_id', currentUser.id).eq('is_active', true);
+  userHoldings = holdings || [];
+
+  // Load goals
+  const { data: goals } = await sb.from('goals').select('*').eq('user_id', currentUser.id).order('created_at');
+  userGoals = goals || [];
+
+  // Load uploads
+  const { data: uploads } = await sb.from('uploads').select('*').eq('user_id', currentUser.id).order('upload_date', {ascending:false}).limit(10);
+  window.userUploads = uploads || [];
+}
+
+// ═══════════ HEALTH SCORE ═══════════
+function calcHealthScore(cibil, debt, income, sip) {
+  let score = 0;
+  // CIBIL: max 25
+  score += Math.round(Math.max(0, Math.min(25, (cibil-300)/600*25)));
+  // DTI: max 25 (lower is better)
+  const dti = income > 0 ? debt/income/12 : 1;
+  score += Math.round(Math.max(0, Math.min(25, (1-dti)*25)));
+  // Savings rate: max 25
+  const sr = income > 0 ? sip/income : 0;
+  score += Math.round(Math.max(0, Math.min(25, sr*100)));
+  // Base stability: 25
+  score += 25;
+  return Math.min(100, score);
+}
+
+// ═══════════ RENDER HOME ═══════════
+function renderHome() {
+  const s = latestSnapshot || {};
+  const income = s.monthly_income || 0;
+  const emi = userLoans.reduce((t,l)=>t+l.emi,0);
+  const sip = s.monthly_sip || 0;
+  const rent = s.rent || 0;
+  const score = s.health_score || calcHealthScore(s.cibil_score||0, s.total_debt||0, income, sip);
+
+  // Score ring
+  document.getElementById('scoreNum').textContent = score;
+  const offset = 201 - (score/100*201);
+  document.getElementById('scoreArc').setAttribute('stroke-dashoffset', offset);
+  const scoreColor = score >= 70 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('scoreNum').style.color = scoreColor;
+  document.getElementById('scoreVerdict').style.color = scoreColor;
+  document.getElementById('scoreVerdict').textContent = score>=70?'GOOD SHAPE':score>=50?'NEEDS WORK':'CRITICAL';
+  document.getElementById('scoreDesc').textContent = score>=70?'Strong foundation. Keep investing consistently.':score>=50?'Active debt is slowing your wealth journey.':'Debt burden is critical. Prioritise avalanche payoff.';
+  document.getElementById('scoreTarget').textContent = `Target: ${Math.min(100,score+20)}+ in 12 months`;
+
+  // Alerts
+  const alerts = document.getElementById('home-alerts');
+  alerts.innerHTML = '';
+  if(emi > 0 && income > 0 && emi/income > 0.25) alerts.innerHTML += `<div class="alert warn" style="margin-top:4px"><div class="alert-icon">⚠</div><div>EMIs are <strong>${Math.round(emi/income*100)}% of income</strong> — above safe 25% threshold.</div></div>`;
+  if(s.cibil_score && s.cibil_score < 700) alerts.innerHTML += `<div class="alert warn"><div class="alert-icon">⚠</div><div><strong>CIBIL ${s.cibil_score}</strong> — take no new credit. Focus on EMI consistency.</div></div>`;
+  if(!alerts.innerHTML) alerts.innerHTML = `<div class="alert good" style="margin-top:4px"><div class="alert-icon">✓</div><div>All systems normal. Keep up the SIP discipline!</div></div>`;
+
+  // KPIs
+  const kpis = [
+    {l:'Income',   v:income?fmt(income):'—',   c:'var(--blue)', b:'var(--blue)'},
+    {l:'Debt',     v:s.total_debt?fmt(s.total_debt):'—', c:'var(--red)',  b:'var(--red)'},
+    {l:'Portfolio',v:s.portfolio_value?fmt(s.portfolio_value):'—', c:'var(--green)', b:'var(--green)'},
+    {l:'CIBIL',    v:s.cibil_score||'—',        c:'var(--amber)',b:'var(--amber)'},
+  ];
+  const hk = document.getElementById('home-kpis');
+  hk.innerHTML = '';
+  kpis.forEach(k => {
+    hk.innerHTML += `<div class="kpi" style="border-top:2px solid ${k.b}"><div class="kpi-l">${k.l}</div><div class="kpi-v" style="color:${k.c}">${k.v}</div></div>`;
+  });
+
+  // Cashflow donut
+  const cd = document.getElementById('homeCashflow');
+  if(cd._c) cd._c.destroy();
+  const free = Math.max(0, income - emi - sip - rent);
+  cd._c = new Chart(cd,{type:'doughnut',data:{
+    labels:['EMIs','SIP','Rent','Free cash'],
+    datasets:[{data:[emi,sip,rent,free],backgroundColor:['#ff5370','#4d9fff','#fb923c','#00e5a0'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:true,position:'right',labels:{color:'#7c8299',font:{size:10},boxWidth:10,padding:6}},tooltip:{callbacks:{label:ctx=>`₹${ctx.raw.toLocaleString('en-IN')}`}}}}});
+
+  // Goals
+  const gg = document.getElementById('home-goals');
+  gg.innerHTML = '';
+  if(!userGoals.length) { gg.innerHTML = '<div style="font-size:12px;color:var(--sub);text-align:center;padding:12px">No goals yet — add your first goal</div>'; return; }
+  userGoals.slice(0,5).forEach(g => {
+    const pct = g.target_amount ? Math.min(100,Math.round(g.current_amount/g.target_amount*100)) : 0;
+    const color = g.color || 'var(--green)';
+    gg.innerHTML += `<div class="prog-row">
+      <div class="prog-lbl">${g.name}</div>
+      <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="prog-val">${pct}%</div>
+    </div>`;
+  });
+}
+
+// ═══════════ RENDER DEBT ═══════════
+function renderDebt() {
+  const totalBal = userLoans.reduce((t,l)=>t+l.current_balance,0);
+  const totalEMI = userLoans.reduce((t,l)=>t+l.emi,0);
+  const income = latestSnapshot?.monthly_income || 0;
+
+  const dk = document.getElementById('debt-kpis');
+  dk.innerHTML = `
+    <div class="kpi" style="border-top:2px solid var(--red)"><div class="kpi-l">Total debt</div><div class="kpi-v" style="color:var(--red)">${totalBal?fmt(totalBal):'₹0'}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--amber)"><div class="kpi-l">Monthly EMI</div><div class="kpi-v" style="color:var(--amber)">${totalEMI?fmt(totalEMI):'₹0'}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--red)"><div class="kpi-l">DTI ratio</div><div class="kpi-v" style="color:${income&&totalEMI/income>0.25?'var(--red)':'var(--green)'}">${income?Math.round(totalEMI/income*100)+'%':'—'}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--green)"><div class="kpi-l">Active loans</div><div class="kpi-v" style="color:var(--green)">${userLoans.length}</div></div>`;
+
+  const dl = document.getElementById('debt-list');
+  dl.innerHTML = '';
+  if(!userLoans.length) { dl.innerHTML = '<div style="font-size:12px;color:var(--sub);text-align:center;padding:16px">No loans added yet</div>'; }
+  [...userLoans].sort((a,b)=>b.interest_rate-a.interest_rate).forEach((l,i) => {
+    const pct = l.original_amount ? Math.round((1-l.current_balance/l.original_amount)*100) : 0;
+    const rc = l.interest_rate>=14?'var(--red)':l.interest_rate>=10?'var(--amber)':'var(--green)';
+    const pill = i===0&&l.interest_rate>10?'<span class="pill p-r">KILL FIRST</span>':l.interest_rate<=6?'<span class="pill p-g">KEEP</span>':'<span class="pill p-b">EMI</span>';
+    dl.innerHTML += `<div class="list-item">
+      <div class="li-top"><div class="li-name">${l.lender}</div><div style="display:flex;gap:6px;align-items:center">${pill}<span style="font-family:var(--mono);font-size:11px;color:${rc}">${l.interest_rate}%</span></div></div>
+      <div class="li-bar"><div class="li-fill" style="width:${pct}%;background:${l.color||'#4d9fff'}"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <div class="li-sub">${fmt(l.current_balance)} remaining</div>
+        <div class="li-sub">EMI ${fmt(l.emi)}/mo</div>
+      </div>
+    </div>`;
+  });
+
+  // Simple payoff chart
+  const dc = document.getElementById('debtChart');
+  if(dc._c) dc._c.destroy();
+  const labels = ['Now','Mo3','Mo6','Mo9','Mo12','Mo15','Mo18','Mo24'];
+  const datasets = userLoans.slice(0,4).map(l => ({
+    label: l.lender,
+    data: labels.map((_,m)=>Math.max(0,Math.round(l.current_balance*(1-m/24)))),
+    borderColor: l.color||'#4d9fff', backgroundColor:'transparent', borderWidth:1.5, pointRadius:2, tension:.2
+  }));
+  if(datasets.length) dc._c = new Chart(dc,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#7c8299',font:{size:9},boxWidth:10,padding:6}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9},callback:v=>fmt(v)}}}}});
+}
+
+// ═══════════ RENDER PORTFOLIO ═══════════
+function renderPortfolio() {
+  const totalVal = userHoldings.reduce((t,h)=>t+h.current_value,0) || latestSnapshot?.portfolio_value || 0;
+  const totalInv = userHoldings.reduce((t,h)=>t+h.invested_amount,0) || latestSnapshot?.total_invested || 0;
+  const gain = totalVal - totalInv;
+
+  const pk = document.getElementById('port-kpis');
+  pk.innerHTML = `
+    <div class="kpi" style="border-top:2px solid var(--green)"><div class="kpi-l">Value</div><div class="kpi-v" style="color:var(--green)">${fmt(totalVal)}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--sub)"><div class="kpi-l">Invested</div><div class="kpi-v" style="color:var(--sub)">${fmt(totalInv)}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--green)"><div class="kpi-l">P&L</div><div class="kpi-v" style="color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmt(gain)}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--amber)"><div class="kpi-l">Return</div><div class="kpi-v" style="color:${gain>=0?'var(--green)':'var(--red)'}">${totalInv?((gain/totalInv)*100).toFixed(1)+'%':'—'}</div></div>`;
+
+  // Pie
+  const pp = document.getElementById('portPie');
+  if(pp._c) pp._c.destroy();
+  const mfV = userHoldings.filter(h=>h.holding_type==='MF').reduce((t,h)=>t+h.current_value,0);
+  const etfV = userHoldings.filter(h=>h.holding_type==='ETF').reduce((t,h)=>t+h.current_value,0);
+  const stV = userHoldings.filter(h=>h.holding_type==='Stock').reduce((t,h)=>t+h.current_value,0);
+  const otherV = totalVal - mfV - etfV - stV;
+  if(totalVal > 0) pp._c = new Chart(pp,{type:'doughnut',data:{labels:['MF','ETF','Stock','Other'],datasets:[{data:[mfV,etfV,stV,otherV].filter(v=>v>0),backgroundColor:['#4d9fff','#9d7aff','#ffb930','#00e5a0'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:true,position:'right',labels:{color:'#7c8299',font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}}}});
+
+  // List
+  const pl = document.getElementById('port-list');
+  pl.innerHTML = '';
+  if(!userHoldings.length) { pl.innerHTML = '<div style="font-size:12px;color:var(--sub);text-align:center;padding:16px">No holdings added yet</div>'; return; }
+  userHoldings.forEach(h => {
+    const ret = h.invested_amount ? ((h.current_value-h.invested_amount)/h.invested_amount*100).toFixed(1) : 0;
+    const rc = parseFloat(ret) >= 0 ? 'var(--green)' : 'var(--red)';
+    pl.innerHTML += `<div class="list-item">
+      <div class="li-top">
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:2px;background:${h.color||'#4d9fff'}"></div><div class="li-name">${h.name}</div></div>
+        <div><div class="li-val">${fmt(h.current_value)}</div><div class="li-sub" style="color:${rc}">${ret>=0?'+':''}${ret}%</div></div>
+      </div>
+      <div class="li-sub">${h.holding_type} · Invested ${fmt(h.invested_amount)}</div>
+    </div>`;
+  });
+}
+
+// ═══════════ RENDER GOALS ═══════════
+function renderGoals() {
+  const sip = latestSnapshot?.monthly_sip || 0;
+  const corpus = latestSnapshot?.portfolio_value || 0;
+  function fvs(s,r,m,c0){const mr=r/1200;let v=c0;for(let i=0;i<m;i++)v=v*(1+mr)+s;return Math.round(v);}
+
+  // Chart
+  const pc = document.getElementById('projChart');
+  if(pc._c) pc._c.destroy();
+  const mos = [0,12,24,36,48,60,72,84,96,108,120];
+  const lbls = mos.map(m=>m===0?'Now':`Yr${m/12}`);
+  pc._c = new Chart(pc,{type:'line',data:{labels:lbls,datasets:[
+    {label:`₹${Math.round(sip/1000)}K SIP`,data:mos.map(m=>fvs(sip,13.5,m,corpus)),borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,.08)',borderWidth:2,pointRadius:2,fill:true,tension:.4},
+    {label:`₹${Math.round(sip*2/1000)}K SIP`,data:mos.map(m=>fvs(sip*2,13.5,m,corpus)),borderColor:'#4d9fff',backgroundColor:'rgba(77,159,255,.05)',borderWidth:1.5,borderDash:[5,3],pointRadius:2,fill:true,tension:.4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#7c8299',font:{size:9},boxWidth:10,padding:6}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9},callback:v=>fmt(v)}}}}});
+
+  // Milestones
+  const pm = document.getElementById('proj-milestones');
+  [{m:24,l:'2 years'},{m:60,l:'5 years'},{m:120,l:'10 years'}].forEach(d => {
+    const v = fvs(sip,13.5,d.m,corpus);
+    pm.innerHTML += `<div class="kpi" style="text-align:center"><div class="kpi-l">${d.l}</div><div class="kpi-v" style="font-size:14px;color:var(--green)">${fmt(v)}</div></div>`;
+  });
+
+  // Goals list
+  const gl = document.getElementById('goals-list');
+  gl.innerHTML = '';
+  if(!userGoals.length) { gl.innerHTML = '<div style="font-size:12px;color:var(--sub);text-align:center;padding:16px">No goals yet — add your first goal</div>'; return; }
+  userGoals.forEach(g => {
+    const pct = g.target_amount ? Math.min(100,Math.round(g.current_amount/g.target_amount*100)) : 0;
+    const color = g.color || '#00e5a0';
+    gl.innerHTML += `<div class="list-item">
+      <div class="li-top"><div class="li-name">${g.name}</div><div class="li-sub">${g.target_date||'No deadline'}</div></div>
+      <div style="height:3px;background:var(--rim);border-radius:2px;overflow:hidden;margin:5px 0"><div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div></div>
+      <div class="li-sub">${pct}% complete${g.target_amount?' · Target '+fmt(g.target_amount):''}</div>
+    </div>`;
+  });
+}
+
+// ═══════════ RENDER UPLOAD ═══════════
+function renderUpload() {
+  const uh = document.getElementById('upload-history');
+  uh.innerHTML = '';
+  const uploads = window.userUploads || [];
+  if(!uploads.length) { uh.innerHTML = '<div style="font-size:12px;color:var(--sub);text-align:center;padding:12px">No uploads yet</div>'; return; }
+  uploads.forEach(u => {
+    uh.innerHTML += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--wire)">
+      <div style="font-size:18px">${u.file_type==='CIBIL'?'📊':'📈'}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.file_name}</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--sub)">${new Date(u.upload_date).toLocaleDateString('en-IN')}</div></div>
+      <div class="pill p-g">${u.status}</div>
+    </div>`;
+  });
+}
+
+// ═══════════ RENDER ADMIN ═══════════
+async function renderAdmin() {
+  if(userProfile?.role !== 'admin') { showPanel('home'); return; }
+  const { data: stats } = await sb.from('admin_stats').select('*').single();
+  const as = document.getElementById('admin-stats');
+  as.innerHTML = '';
+  if(stats) {
+    [{l:'Total users',v:stats.total_users||0,c:'var(--green)'},{l:'Active (30d)',v:stats.active_last_30d||0,c:'var(--blue)'},{l:'Avg CIBIL',v:Math.round(stats.avg_cibil)||'—',c:'var(--amber)'},{l:'Avg score',v:Math.round(stats.avg_health_score)||'—',c:'var(--purple)'},{l:'Total AUM',v:stats.total_aum?fmt(stats.total_aum):'₹0',c:'var(--green)'},{l:'Uploads',v:stats.total_uploads||0,c:'var(--blue)'}].forEach(s=>{
+      as.innerHTML+=`<div class="admin-stat"><div class="admin-stat-v" style="color:${s.c}">${s.v}</div><div class="admin-stat-l">${s.l}</div></div>`;
+    });
+  }
+  const { data: users } = await sb.from('profiles').select('*').order('created_at',{ascending:false}).limit(50);
+  const au = document.getElementById('admin-users');
+  au.innerHTML = '';
+  (users||[]).forEach(u => {
+    au.innerHTML += `<div class="user-row">
+      <div class="user-av">${initials(u.full_name||u.email)}</div>
+      <div class="user-info">
+        <div class="user-email">${u.email}</div>
+        <div class="user-meta">${u.full_name||'No name'} · Joined ${new Date(u.created_at).toLocaleDateString('en-IN')}</div>
+      </div>
+      <div class="pill ${u.role==='admin'?'p-p':'p-b'}">${u.role}</div>
+    </div>`;
+  });
+}
+
+// ═══════════ UPLOAD HANDLERS ═══════════
+function triggerUpload(type) { document.getElementById('upload-'+type).click(); }
+async function handleUpload(e, type) {
+  const file = e.target.files[0];
+  if(!file) return;
+  showToast('Uploading '+file.name+'...');
+  const { error } = await sb.from('uploads').insert({
+    user_id: currentUser.id,
+    file_name: file.name,
+    file_type: type,
+    status: 'uploaded'
+  });
+  if(error) { showToast('Upload failed: '+error.message, true); return; }
+  showToast('✓ '+file.name+' uploaded. Update your data manually below.');
+  const { data } = await sb.from('uploads').select('*').eq('user_id', currentUser.id).order('upload_date',{ascending:false}).limit(10);
+  window.userUploads = data || [];
+  renderUpload();
+}
+
+// ═══════════ MANUAL UPDATE ═══════════
+async function saveManualUpdate() {
+  const cibil = parseInt(document.getElementById('m-cibil').value);
+  const port = parseInt(document.getElementById('m-port').value);
+  const sip = parseInt(document.getElementById('m-sip').value);
+  const income = parseInt(document.getElementById('m-income').value);
+  const today = new Date();
+  const month = today.toLocaleString('en-IN',{month:'long',year:'numeric'});
+  const update = {
+    user_id: currentUser.id,
+    month,
+    ...(latestSnapshot||{}),
+    ...(!isNaN(cibil)&&cibil>=300&&cibil<=900 ? {cibil_score:cibil}:{}),
+    ...(!isNaN(port)&&port>0 ? {portfolio_value:port}:{}),
+    ...(!isNaN(sip)&&sip>0 ? {monthly_sip:sip}:{}),
+    ...(!isNaN(income)&&income>0 ? {monthly_income:income}:{}),
+  };
+  update.health_score = calcHealthScore(update.cibil_score||0, update.total_debt||0, update.monthly_income||0, update.monthly_sip||0);
+  const { error } = await sb.from('snapshots').upsert(update);
+  if(error) { showToast('Error: '+error.message, true); return; }
+  latestSnapshot = update;
+  showToast('✓ Data updated across all panels');
+  showPanel('home');
+}
+
+// ═══════════ ADD LOAN ═══════════
+async function saveLoan() {
+  const lender = document.getElementById('al-lender').value.trim();
+  const type = document.getElementById('al-type').value;
+  const balance = parseFloat(document.getElementById('al-balance').value);
+  const emi = parseFloat(document.getElementById('al-emi').value);
+  const rate = parseFloat(document.getElementById('al-rate').value);
+  const close = document.getElementById('al-close').value;
+  if(!lender||!balance||!emi) { showToast('Fill lender, balance and EMI', true); return; }
+  const colors = ['#ff5370','#fb923c','#ffb930','#4d9fff','#9d7aff','#00e5a0'];
+  const color = colors[userLoans.length % colors.length];
+  const { error } = await sb.from('loans').insert({ user_id:currentUser.id, lender, loan_type:type, original_amount:balance, current_balance:balance, emi, interest_rate:rate||0, expected_close:close||null, color });
+  if(error) { showToast('Error: '+error.message, true); return; }
+  closeModal('modal-addloan');
+  await loadUserData();
+  renderDebt();
+  showToast('✓ Loan added');
+}
+
+// ═══════════ ADD HOLDING ═══════════
+async function saveHolding() {
+  const name = document.getElementById('ah-name').value.trim();
+  const type = document.getElementById('ah-type').value;
+  const inv = parseFloat(document.getElementById('ah-inv').value);
+  const val = parseFloat(document.getElementById('ah-val').value);
+  if(!name||!inv||!val) { showToast('Fill all fields', true); return; }
+  const colors = ['#4d9fff','#9d7aff','#00e5a0','#ffb930','#ff5370','#fb923c'];
+  const color = colors[userHoldings.length % colors.length];
+  const { error } = await sb.from('holdings').insert({ user_id:currentUser.id, name, holding_type:type, invested_amount:inv, current_value:val, color });
+  if(error) { showToast('Error: '+error.message, true); return; }
+  closeModal('modal-addholding');
+  await loadUserData();
+  renderPortfolio();
+  showToast('✓ Holding added');
+}
+
+// ═══════════ ADD GOAL ═══════════
+async function saveGoal() {
+  const name = document.getElementById('ag-name').value.trim();
+  const cat = document.getElementById('ag-cat').value;
+  const target = parseFloat(document.getElementById('ag-target').value);
+  const date = document.getElementById('ag-date').value;
+  if(!name) { showToast('Enter goal name', true); return; }
+  const { error } = await sb.from('goals').insert({ user_id:currentUser.id, name, category:cat, target_amount:target||null, target_date:date||null });
+  if(error) { showToast('Error: '+error.message, true); return; }
+  closeModal('modal-addgoal');
+  await loadUserData();
+  renderGoals();
+  showToast('✓ Goal added');
+}
+
+// ═══════════ PROFILE MODAL ═══════════
+function renderProfileModal() {
+  const p = userProfile || {};
+  document.getElementById('profile-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-weight:800;font-size:22px;color:#000;margin:0 auto 10px">${initials(p.full_name||p.email)}</div>
+      <div style="font-family:var(--syne);font-size:16px;font-weight:700">${p.full_name||'User'}</div>
+      <div style="font-size:12px;color:var(--sub)">${p.email}</div>
+      <div class="pill ${p.role==='admin'?'p-p':'p-b'}" style="margin-top:6px">${p.role||'user'}</div>
+    </div>
+    <div style="background:var(--lift);border-radius:10px;padding:12px">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--wire);font-size:12px"><span style="color:var(--sub)">Portfolio</span><span style="font-family:var(--mono)">${latestSnapshot?.portfolio_value?fmt(latestSnapshot.portfolio_value):'—'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--wire);font-size:12px"><span style="color:var(--sub)">CIBIL</span><span style="font-family:var(--mono);color:var(--amber)">${latestSnapshot?.cibil_score||'—'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px"><span style="color:var(--sub)">Health score</span><span style="font-family:var(--mono);color:var(--green)">${latestSnapshot?.health_score||'—'} / 100</span></div>
+    </div>`;
+}
+
+// ═══════════ AUTH STATE LISTENER ═══════════
+sb.auth.onAuthStateChange(async (event, session) => {
+  if(event === 'SIGNED_IN' && session) {
+    currentUser = session.user;
+    showScreen('loading');
+    await loadUserData();
+
+    // Check if onboarding needed
+    if(!latestSnapshot) {
+      showScreen('onboarding');
+    } else {
+      showScreen('app');
+      renderHome();
+    }
+  } else if(event === 'SIGNED_OUT') {
+    showScreen('auth');
+  }
+});
+
+// ═══════════ INIT ═══════════
+window.addEventListener('load', async () => {
+  // Check for existing session
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) {
+    showScreen('auth');
+  }
+  // Hide loading after 2s max
+  setTimeout(() => {
+    if(document.getElementById('screen-loading').classList.contains('active')) {
+      showScreen('auth');
+    }
+  }, 2000);
+});
+
+// Profile modal hook
+document.getElementById('modal-profile').addEventListener('click', function(e) {
+  if(e.target === this) closeModal('modal-profile');
+});
+
+// Open profile modal render
+const origOpenModal = openModal;
+window.openModal = function(id) {
+  origOpenModal(id);
+  if(id==='modal-profile') renderProfileModal();
+};
+
+// Service worker
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
