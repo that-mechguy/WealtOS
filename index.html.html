@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WealthOS">
+<meta name="theme-color" content="#050608">
+<meta name="description" content="Personal financial intelligence — Abhishek Mishra">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>WealthOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --void:#050608; --surface:#0a0c12; --lift:#111420; --rim:#1c2035;
+  --wire:rgba(255,255,255,0.07); --wire2:rgba(255,255,255,0.12);
+  --text:#eceef5; --sub:#7c8299; --dim:#3d4259;
+  --green:#00e5a0; --gd:rgba(0,229,160,0.12);
+  --red:#ff5370;   --rd:rgba(255,83,112,0.12);
+  --amber:#ffb930; --ad:rgba(255,185,48,0.10);
+  --blue:#4d9fff;  --bd:rgba(77,159,255,0.10);
+  --purple:#9d7aff;--pd:rgba(157,122,255,0.10);
+  --pink:#ff6eb4;  --pkd:rgba(255,110,180,0.10);
+  --syne:'Syne',sans-serif; --mono:'Space Mono',monospace; --body:'DM Sans',sans-serif;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;background:var(--void);overflow:hidden}
+body{height:100%;font-family:var(--body);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden;background:var(--void)}
+
+/* ── SHELL ── */
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--wire);padding:calc(var(--safe-top) + 12px) 18px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-family:var(--syne);font-size:18px;font-weight:800;letter-spacing:-.02em}
+.topbar-title span{color:var(--green)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.sync-badge{font-family:var(--mono);font-size:9px;color:var(--green);background:var(--gd);border:1px solid rgba(0,229,160,.2);padding:3px 8px;border-radius:4px}
+.upload-btn{font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:6px;background:var(--green);color:#000;font-weight:700;border:none;cursor:pointer}
+
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:0 0 calc(var(--safe-bottom) + 70px)}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--wire);display:flex;padding-bottom:var(--safe-bottom);z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;cursor:pointer;transition:color .15s;color:var(--dim);border:none;background:none}
+.nav-btn.active{color:var(--green)}
+.nav-btn.active .nav-icon-wrap{background:var(--gd)}
+.nav-icon-wrap{width:36px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:3px;transition:background .15s}
+.nav-icon{font-size:16px}
+.nav-label{font-family:var(--mono);font-size:8px;letter-spacing:.04em}
+
+/* ── PANELS ── */
+.panel{display:none;padding:16px}
+.panel.active{display:block}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-family:var(--syne);font-size:13px;font-weight:700;letter-spacing:-.01em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;color:var(--text)}
+.sec-tag{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:3px}
+
+/* ── HERO SCORE ── */
+.score-hero{background:linear-gradient(135deg,var(--lift) 0%,#0d1525 100%);border:1px solid var(--wire2);border-radius:16px;padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px}
+.score-ring{position:relative;width:90px;height:90px;flex-shrink:0}
+.score-ring svg{position:absolute;top:0;left:0}
+.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-family:var(--syne);font-size:28px;font-weight:800;color:var(--amber)}
+.score-sub{font-family:var(--mono);font-size:8px;color:var(--sub)}
+.score-info .score-verdict{font-family:var(--syne);font-size:16px;font-weight:700;color:var(--amber);margin-bottom:4px}
+.score-info .score-desc{font-size:12px;color:var(--sub);line-height:1.5;margin-bottom:8px}
+.score-target{font-family:var(--mono);font-size:10px;color:var(--green);background:var(--gd);padding:3px 8px;border-radius:4px;display:inline-block}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:var(--lift);border:1px solid var(--wire);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.kpi-l{font-family:var(--mono);font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.kpi-v{font-family:var(--syne);font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.kpi-s{font-size:10px;color:var(--sub);margin-top:3px}
+
+/* ── CARD ── */
+.card{background:var(--lift);border:1px solid var(--wire);border-radius:14px;padding:16px;margin-bottom:12px}
+
+/* ── ALERT ── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:10px;font-size:12px;line-height:1.5}
+.alert.warn{background:var(--ad);border:1px solid rgba(255,185,48,.2)}
+.alert.good{background:var(--gd);border:1px solid rgba(0,229,160,.2)}
+.alert.info{background:var(--bd);border:1px solid rgba(77,159,255,.2)}
+.alert.danger{background:var(--rd);border:1px solid rgba(255,83,112,.2)}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.alert strong{color:var(--text)}
+
+/* ── PROGRESS ── */
+.prog-row{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.prog-lbl{font-size:11px;color:var(--sub);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog-track{width:90px;height:4px;background:var(--rim);border-radius:2px;overflow:hidden;flex-shrink:0}
+.prog-fill{height:100%;border-radius:2px}
+.prog-val{font-family:var(--mono);font-size:10px;color:var(--text);min-width:32px;text-align:right}
+
+/* ── PILL ── */
+.pill{display:inline-block;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;white-space:nowrap}
+.p-g{background:var(--gd);color:var(--green)} .p-r{background:var(--rd);color:var(--red)}
+.p-a{background:var(--ad);color:var(--amber)} .p-b{background:var(--bd);color:var(--blue)}
+.p-p{background:var(--pd);color:var(--purple)} .p-pk{background:var(--pkd);color:var(--pink)}
+
+/* ── LOAN ROW ── */
+.loan-item{padding:12px 0;border-bottom:1px solid var(--wire)}
+.loan-item:last-child{border-bottom:none}
+.loan-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.loan-name{font-size:13px;font-weight:500}
+.loan-rate{font-family:var(--mono);font-size:11px}
+.loan-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.loan-track{flex:1;height:4px;background:var(--rim);border-radius:2px;overflow:hidden}
+.loan-fill{height:100%;border-radius:2px}
+.loan-bottom{display:flex;justify-content:space-between}
+.loan-bal{font-family:var(--mono);font-size:11px;color:var(--text)}
+.loan-emi{font-family:var(--mono);font-size:10px;color:var(--sub)}
+
+/* ── HOLDING ROW ── */
+.holding-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--wire)}
+.holding-item:last-child{border-bottom:none}
+.holding-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.holding-info{flex:1;min-width:0}
+.holding-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.holding-type{font-family:var(--mono);font-size:9px;color:var(--sub)}
+.holding-right{text-align:right;flex-shrink:0}
+.holding-val{font-family:var(--mono);font-size:12px;font-weight:700}
+.holding-ret{font-family:var(--mono);font-size:10px}
+
+/* ── SIP ROW ── */
+.sip-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--wire)}
+.sip-item:last-child{border-bottom:none}
+.sip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sip-name{flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sip-cur{font-family:var(--mono);font-size:11px;color:var(--sub);text-align:right;min-width:60px}
+.sip-tgt{font-family:var(--mono);font-size:11px;color:var(--blue);text-align:right;min-width:60px;font-weight:700}
+
+/* ── TIMELINE ── */
+.tl{position:relative;padding-left:24px}
+.tl::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:1px;background:var(--wire2)}
+.tl-item{position:relative;margin-bottom:14px}
+.tl-dot{position:absolute;left:-21px;top:2px;width:10px;height:10px;border-radius:50%;border:2px solid}
+.tl-dot.done{background:var(--green);border-color:var(--green)}
+.tl-dot.active{background:var(--amber);border-color:var(--amber);box-shadow:0 0 6px var(--amber)}
+.tl-dot.future{background:transparent;border-color:var(--dim)}
+.tl-dot.wedding{background:var(--pink);border-color:var(--pink)}
+.tl-month{font-family:var(--mono);font-size:9px;color:var(--sub);margin-bottom:2px}
+.tl-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px}
+.tl-sub{font-size:11px;color:var(--sub);line-height:1.5}
+
+/* ── CHART ── */
+.chart-box{background:var(--lift);border:1px solid var(--wire);border-radius:14px;padding:14px;margin-bottom:12px}
+
+/* ── ALLOC BAR ── */
+.alloc-strip{display:flex;height:14px;border-radius:4px;overflow:hidden;gap:1px;margin-bottom:6px}
+.alloc-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:7px;font-weight:700;color:rgba(255,255,255,.85);overflow:hidden;white-space:nowrap}
+
+/* ── UPLOAD ── */
+.upload-zone{border:1.5px dashed var(--wire2);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--lift);margin-bottom:12px}
+.upload-zone:active,.upload-zone.drag{border-color:var(--green);background:var(--gd)}
+.upload-icon{font-size:28px;margin-bottom:8px}
+.upload-title{font-family:var(--syne);font-size:13px;font-weight:600;margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--sub);margin-bottom:12px}
+.upload-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:8px;margin-bottom:6px;border:1px solid var(--wire)}
+
+/* ── INPUT ── */
+.inp{background:var(--surface);border:1px solid var(--wire2);border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:12px;width:100%;outline:none;transition:border .15s;-webkit-appearance:none}
+.inp:focus{border-color:var(--green)}
+.inp-label{font-family:var(--mono);font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+
+/* ── BTN ── */
+.btn{font-family:var(--mono);font-size:11px;padding:12px 20px;border-radius:8px;border:none;cursor:pointer;width:100%;font-weight:700;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn-primary{background:var(--green);color:#000}
+.btn-outline{background:transparent;border:1px solid var(--wire2);color:var(--sub);margin-top:8px}
+
+/* ── MONTH TABS ── */
+.month-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.month-tabs::-webkit-scrollbar{display:none}
+.month-tab{font-family:var(--mono);font-size:10px;padding:5px 10px;border-radius:4px;border:1px solid var(--wire);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;color:var(--sub);background:transparent}
+.month-tab.active{background:var(--gd);border-color:rgba(0,229,160,.3);color:var(--green)}
+
+/* ── CIBIL BAR ── */
+.cibil-bar-wrap{position:relative;margin:10px 0}
+.cibil-bar{height:10px;border-radius:5px;background:linear-gradient(90deg,#ef4444 0%,#f59e0b 35%,#00e5a0 65%,#00e5a0 100%)}
+.cibil-needle{position:absolute;top:-4px;transform:translateX(-50%);width:3px;height:18px;background:white;border-radius:2px}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:calc(var(--safe-top) + 70px);left:50%;transform:translateX(-50%);background:var(--lift);border:1px solid rgba(0,229,160,.3);color:var(--green);font-family:var(--mono);font-size:11px;padding:10px 18px;border-radius:8px;z-index:999;white-space:nowrap;transition:opacity .3s;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.toast.hide{opacity:0}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.panel.active .card,.panel.active .kpi,.panel.active .chart-box,.panel.active .score-hero{animation:fadeUp .3s ease both}
+.panel.active .kpi:nth-child(2){animation-delay:.04s}
+.panel.active .kpi:nth-child(3){animation-delay:.08s}
+.panel.active .kpi:nth-child(4){animation-delay:.12s}
+.panel.active .card:nth-child(3){animation-delay:.06s}
+.panel.active .card:nth-child(4){animation-delay:.1s}
+
+/* Scrollbar */
+::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title">Wealth<span>OS</span></div>
+    <div class="topbar-right">
+      <div class="sync-badge" id="syncBadge">● LIVE</div>
+      <button class="upload-btn" onclick="showPanel('upload')">⊕ Upload</button>
+    </div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll-area" id="scrollArea">
+
+    <!-- ════ HOME ════ -->
+    <div class="panel active" id="panel-home">
+      <div class="alert warn" style="margin-top:4px">
+        <div class="alert-icon">⚠</div>
+        <div>Pay <strong>SMICC ₹6,895</strong> this week — frees ₹3,500/month EMI instantly.</div>
+      </div>
+      <div class="alert good">
+        <div class="alert-icon">✓</div>
+        <div><strong>New job July 2026</strong> — debt-free by April 2027, SIP hits ₹1.1L/month.</div>
+      </div>
+
+      <!-- Score ring -->
+      <div class="score-hero">
+        <div class="score-ring">
+          <svg width="90" height="90" viewBox="0 0 90 90" role="img" aria-label="Financial health score 54 out of 100">
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#1c2035" stroke-width="7"/>
+            <circle cx="45" cy="45" r="36" fill="none" stroke="url(#g1)" stroke-width="7"
+              stroke-dasharray="226" stroke-dashoffset="104" stroke-linecap="round" transform="rotate(-90 45 45)"/>
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#00e5a0"/><stop offset="100%" stop-color="#4d9fff"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="score-center">
+            <div class="score-num" id="scoreNum">54</div>
+            <div class="score-sub">/ 100</div>
+          </div>
+        </div>
+        <div class="score-info">
+          <div class="score-verdict">NEEDS WORK</div>
+          <div class="score-desc">Strong income, active debt drag. On track with new job plan.</div>
+          <div class="score-target">Target: 80+ by Apr 2027</div>
+        </div>
+      </div>
+
+      <!-- KPI grid -->
+      <div class="kpi-grid">
+        <div class="kpi" style="--kc:var(--blue)"><style>.kpi:nth-child(1)::before{background:var(--blue)}</style>
+          <div class="kpi-l">Income</div>
+          <div class="kpi-v" style="color:var(--blue)" id="incomeKPI">₹1,43,000</div>
+          <div class="kpi-s">current salary</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Total debt</div>
+          <div class="kpi-v" style="color:var(--red)">₹8,01,092</div>
+          <div class="kpi-s">6 active loans</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Portfolio</div>
+          <div class="kpi-v" style="color:var(--green)" id="portKPI">₹4,13,066</div>
+          <div class="kpi-s">+₹47,617 profit</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">CIBIL score</div>
+          <div class="kpi-v" style="color:var(--amber)" id="cibilKPI">776</div>
+          <div class="kpi-s">Good · 30+ enquiries</div>
+        </div>
+      </div>
+
+      <!-- Alloc bar -->
+      <div class="card">
+        <div class="sec-title">Portfolio split</div>
+        <div class="alloc-strip" id="homeAllocBar"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px" id="homeAllocLeg"></div>
+      </div>
+
+      <!-- Monthly cashflow -->
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:10px">Monthly cashflow</div>
+        <div style="height:160px;position:relative">
+          <canvas id="cashDonut" role="img" aria-label="Donut chart showing income split between EMIs, SIP, rent and free cash"></canvas>
+        </div>
+      </div>
+
+      <!-- Goals -->
+      <div class="card">
+        <div class="sec-title">Goal tracker</div>
+        <div id="homeGoals"></div>
+      </div>
+    </div>
+
+    <!-- ════ DEBT ════ -->
+    <div class="panel" id="panel-debt">
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-l">Total debt</div>
+          <div class="kpi-v" style="color:var(--red)">₹8,01,092</div>
+          <div class="kpi-s">6 loans active</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Debt-free</div>
+          <div class="kpi-v" style="color:var(--green)">Apr 2027</div>
+          <div class="kpi-s">11 months away</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Total EMI</div>
+          <div class="kpi-v" style="color:var(--amber)">₹37,576</div>
+          <div class="kpi-s">per month</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">DTI ratio</div>
+          <div class="kpi-v" style="color:var(--red)">26.3%</div>
+          <div class="kpi-s">target &lt;15%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">Loans — avalanche order <span class="pill p-r">Kill highest rate first</span></div>
+        <div id="loanList"></div>
+      </div>
+
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:10px">Debt payoff chart</div>
+        <div style="height:200px;position:relative">
+          <canvas id="debtChart" role="img" aria-label="Line chart showing each loan balance declining to zero by April 2027"></canvas>
+        </div>
+      </div>
+
+      <!-- Month picker -->
+      <div class="card">
+        <div class="sec-title">Month detail</div>
+        <div class="month-tabs" id="debtMonthTabs"></div>
+        <div id="debtMonthDetail"></div>
+      </div>
+    </div>
+
+    <!-- ════ PORTFOLIO ════ -->
+    <div class="panel" id="panel-portfolio">
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-l">Current value</div>
+          <div class="kpi-v" style="color:var(--green)" id="portValKPI">₹4,13,066</div>
+          <div class="kpi-s">total portfolio</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Invested</div>
+          <div class="kpi-v" style="color:var(--sub)">₹3,65,449</div>
+          <div class="kpi-s">principal</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">P&L</div>
+          <div class="kpi-v" style="color:var(--green)">+₹47,617</div>
+          <div class="kpi-s">unrealised</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">XIRR</div>
+          <div class="kpi-v" style="color:var(--amber)">11.89%</div>
+          <div class="kpi-s">annualised</div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:10px">MF vs ETF vs Stock</div>
+        <div style="height:160px;position:relative">
+          <canvas id="portPie" role="img" aria-label="Donut chart showing portfolio split 73% mutual funds, 20% ETFs, 7% stocks"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">All holdings</div>
+        <div id="holdingsList"></div>
+      </div>
+    </div>
+
+    <!-- ════ GOALS ════ -->
+    <div class="panel" id="panel-goals">
+      <!-- SIP ramp -->
+      <div class="card">
+        <div class="sec-title">SIP capacity ramp</div>
+        <div class="alert info" style="margin-bottom:10px">
+          <div class="alert-icon">ℹ</div>
+          <div>SIP grows from <strong>₹40K → ₹1.1L/month</strong> purely from freed EMIs by Apr 2027.</div>
+        </div>
+        <div id="sipRampList"></div>
+      </div>
+
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:10px">SIP growth timeline</div>
+        <div style="height:180px;position:relative">
+          <canvas id="sipChart" role="img" aria-label="Bar chart showing SIP growing from 40K to 110K month by month"></canvas>
+        </div>
+      </div>
+
+      <!-- Wedding fund -->
+      <div class="card" style="border-top:3px solid var(--pink)">
+        <div class="sec-title">Wedding fund <span class="sec-tag p-pk">Dec 2027</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-family:var(--syne);font-size:28px;font-weight:800;color:var(--pink)">₹35L</div>
+          <div style="text-align:right;font-family:var(--mono);font-size:10px;color:var(--sub)">target amount<br>both weddings</div>
+        </div>
+        <div class="prog-row" style="margin-bottom:14px">
+          <div class="prog-lbl" style="flex:1">Fund progress</div>
+          <div style="flex:2"><div style="height:6px;background:var(--rim);border-radius:3px;overflow:hidden"><div class="prog-fill" style="width:0%;background:var(--pink)"></div></div></div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--pink);margin-left:8px">₹0 / ₹35L</div>
+        </div>
+        <div class="kpi-grid-3">
+          <div style="background:var(--surface);border:1px solid var(--wire);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:8px;color:var(--sub);margin-bottom:4px">SAVINGS</div>
+            <div style="font-family:var(--syne);font-size:14px;font-weight:700;color:var(--pink)">₹15L</div>
+            <div style="font-size:10px;color:var(--sub)">Apr–Nov 27</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--wire);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:8px;color:var(--sub);margin-bottom:4px">REDEEM</div>
+            <div style="font-family:var(--syne);font-size:14px;font-weight:700;color:var(--blue)">₹12L</div>
+            <div style="font-size:10px;color:var(--sub)">1.4% corpus</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--wire);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:8px;color:var(--sub);margin-bottom:4px">LOAN</div>
+            <div style="font-family:var(--syne);font-size:14px;font-weight:700;color:var(--amber)">₹8L</div>
+            <div style="font-size:10px;color:var(--sub)">₹17,228 EMI</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10yr projection -->
+      <div class="chart-box">
+        <div class="sec-title" style="margin-bottom:10px">10-year projection</div>
+        <div style="height:180px;position:relative">
+          <canvas id="projChart" role="img" aria-label="Line chart showing three scenarios: 40K SIP reaches 8.5Cr, 90K SIP reaches 19Cr, 110K SIP reaches 22.9Cr at 10 years"></canvas>
+        </div>
+        <div class="kpi-grid-3" style="margin-top:10px;margin-bottom:0">
+          <div style="text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--sub)">2 years</div><div style="font-family:var(--syne);font-size:14px;font-weight:700;color:var(--blue)">₹2.6Cr</div></div>
+          <div style="text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--sub)">5 years</div><div style="font-family:var(--syne);font-size:14px;font-weight:700;color:var(--green)">₹9.8Cr</div></div>
+          <div style="text-align:center"><div style="font-family:var(--mono);font-size:9px;color:var(--sub)">10 years</div><div style="font-family:var(--syne);font-size:14px;font-weight:700;color:var(--purple)">₹22.9Cr</div></div>
+        </div>
+      </div>
+
+      <!-- Debt-free timeline -->
+      <div class="card">
+        <div class="sec-title">Debt-free roadmap</div>
+        <div class="tl" id="roadmapTL"></div>
+      </div>
+    </div>
+
+    <!-- ════ UPLOAD ════ -->
+    <div class="panel" id="panel-upload">
+      <div class="upload-zone" onclick="triggerUpload('cibil')" id="cibilZone">
+        <div class="upload-icon">📊</div>
+        <div class="upload-title">Upload CIBIL Report</div>
+        <div class="upload-sub">Drop PDF or tap to browse · Monthly</div>
+        <span class="pill p-a">DUE: JUN 2026</span>
+        <input type="file" id="upload-cibil" accept=".pdf" style="display:none" onchange="handleFile(event,'CIBIL')">
+      </div>
+
+      <div class="upload-zone" onclick="triggerUpload('holding')" id="holdingZone">
+        <div class="upload-icon">📈</div>
+        <div class="upload-title">Upload Holdings Statement</div>
+        <div class="upload-sub">Excel / PDF · MF + Stocks</div>
+        <span class="pill p-a">DUE: JUN 2026</span>
+        <input type="file" id="upload-holding" accept=".xlsx,.pdf,.csv" style="display:none" onchange="handleFile(event,'Holdings')">
+      </div>
+
+      <div class="card">
+        <div class="sec-title">Manual override</div>
+        <div style="display:grid;gap:12px">
+          <div>
+            <label class="inp-label">CIBIL Score</label>
+            <input class="inp" type="number" id="mCIBIL" placeholder="776">
+          </div>
+          <div>
+            <label class="inp-label">Portfolio value (₹)</label>
+            <input class="inp" type="number" id="mPort" placeholder="413066">
+          </div>
+          <div>
+            <label class="inp-label">Monthly SIP (₹)</label>
+            <input class="inp" type="number" id="mSIP" placeholder="40148">
+          </div>
+          <div>
+            <label class="inp-label">Monthly income (₹)</label>
+            <input class="inp" type="number" id="mIncome" placeholder="143000">
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="applyUpdate()">Apply Update</button>
+        <button class="btn btn-outline" onclick="resetData()">Reset to defaults</button>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">Upload history</div>
+        <div id="uploadHistory"></div>
+      </div>
+    </div>
+
+  </div><!-- end scroll area -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="showPanel('home')" id="nav-home">
+      <div class="nav-icon-wrap"><div class="nav-icon">⬡</div></div>
+      <div class="nav-label">HOME</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('debt')" id="nav-debt">
+      <div class="nav-icon-wrap"><div class="nav-icon">◍</div></div>
+      <div class="nav-label">DEBT</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('portfolio')" id="nav-portfolio">
+      <div class="nav-icon-wrap"><div class="nav-icon">◲</div></div>
+      <div class="nav-label">PORTFOLIO</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('goals')" id="nav-goals">
+      <div class="nav-icon-wrap"><div class="nav-icon">◎</div></div>
+      <div class="nav-label">GOALS</div>
+    </button>
+    <button class="nav-btn" onclick="showPanel('upload')" id="nav-upload">
+      <div class="nav-icon-wrap"><div class="nav-icon">⊕</div></div>
+      <div class="nav-label">UPDATE</div>
+    </button>
+  </div>
+</div>
+
+<script>
+// ═══════════ STATE (persisted in localStorage) ═══════════
+const DEFAULTS = {
+  cibil:776, portfolio:413066, invested:365449, sip:40148,
+  income:143000, totalDebt:801092,
+  uploads:[
+    {name:'CIBIL_Report_21-05-2026.pdf', date:'21 May 2026', type:'CIBIL', status:'Processed'},
+    {name:'MF_Holdings_24-05-2026.xlsx', date:'24 May 2026', type:'Holdings', status:'Processed'},
+    {name:'Stocks_23-05-2026.xlsx', date:'23 May 2026', type:'Holdings', status:'Processed'},
+  ],
+  lastSync:'24 May 2026'
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('wealthos-state');
+    return s ? {...DEFAULTS,...JSON.parse(s)} : {...DEFAULTS};
+  } catch { return {...DEFAULTS}; }
+}
+function saveState() {
+  try { localStorage.setItem('wealthos-state', JSON.stringify(state)); } catch {}
+}
+
+let state = loadState();
+
+// ═══════════ DATA ═══════════
+const loans = [
+  {name:'SMICC PL',   bal:6895,   orig:30000,  emi:3500, rate:18.0, color:'#00e5a0', priority:1, close:'Jun 26'},
+  {name:'SBI PL',     bal:125662, orig:200000, emi:6800, rate:15.0, color:'#ff5370', priority:2, close:'Aug 26'},
+  {name:'GrowwCred',  bal:189792, orig:205900, emi:8500, rate:14.0, color:'#fb923c', priority:3, close:'Oct 26'},
+  {name:'HDFC PL',    bal:239208, orig:242169, emi:4500, rate:13.0, color:'#4d9fff', priority:4, close:'Feb 27'},
+  {name:'HSBC PL',    bal:168460, orig:200000, emi:9276, rate:10.5, color:'#9d7aff', priority:5, close:'Jan 27'},
+  {name:'Canara CL',  bal:71075,  orig:188000, emi:1166, rate:6.0,  color:'#22c55e', priority:0, close:'Mar 33'},
+];
+const holdings = [
+  {name:'Canara Robeco ELSS', type:'MF',    val:198227,inv:164000,ret:20.9, color:'#6366f1'},
+  {name:'NASDAQ-100 ETF',     type:'ETF',   val:35893, inv:25603, ret:40.2, color:'#7F77DD'},
+  {name:'Bandhan Small Cap',  type:'MF',    val:16832, inv:15000, ret:12.2, color:'#1D9E75'},
+  {name:'PGIM Midcap',        type:'MF',    val:28081, inv:26600, ret:5.6,  color:'#60a5fa'},
+  {name:'Axis Small Cap',     type:'MF',    val:18867, inv:18000, ret:4.8,  color:'#a78bfa'},
+  {name:'Nippon Multi Asset', type:'MF',    val:13171, inv:12400, ret:6.2,  color:'#BA7517'},
+  {name:'Quant ELSS',         type:'MF',    val:23660, inv:23000, ret:2.9,  color:'#8b5cf6'},
+  {name:'Tata Gold ETF',      type:'ETF',   val:8053,  inv:7655,  ret:5.2,  color:'#EF9F27'},
+  {name:'Tata Silver ETF',    type:'ETF',   val:9326,  inv:8000,  ret:16.6, color:'#B4B2A9'},
+  {name:'Groww Metal ETF',    type:'ETF',   val:6547,  inv:5000,  ret:30.9, color:'#D85A30'},
+  {name:'Nifty BeES (stock)', type:'Stock', val:26910, inv:27676, ret:-2.8, color:'#378ADD'},
+  {name:'AWL Agri',           type:'Stock', val:16234, inv:19130, ret:-15.1,color:'#ef4444'},
+  {name:'RHF (distressed)',   type:'Stock', val:2171,  inv:5340,  ret:-59.3,color:'#6b7280'},
+];
+const sipSteps = [
+  {month:'May 2026', event:'Current (SMICC to close)',    sip:40148,  color:'#ffb930'},
+  {month:'Jun 2026', event:'Transition month',            sip:40148,  color:'#ffb930'},
+  {month:'Jul 2026', event:'New job starts! Income ₹1.95L',sip:60924, color:'#4d9fff'},
+  {month:'Aug 2026', event:'SBI closed (+₹6,800 freed)',  sip:67724,  color:'#4d9fff'},
+  {month:'Oct 2026', event:'GrowwCred closed (+₹8,500)',  sip:56224,  color:'#fb923c'},
+  {month:'Jan 2027', event:'HSBC closed (+₹9,276)',       sip:65500,  color:'#9d7aff'},
+  {month:'Feb 2027', event:'HDFC closed (+₹4,500)',       sip:90000,  color:'#22c55e'},
+  {month:'Mar 2027', event:'Emergency fund done (+₹20K)', sip:110000, color:'#00e5a0'},
+];
+
+// ═══════════ HELPERS ═══════════
+const fmt = v => v>=10000000?'₹'+(v/10000000).toFixed(2)+'Cr':v>=100000?'₹'+(v/100000).toFixed(1)+'L':'₹'+Math.round(v).toLocaleString('en-IN');
+const fmtK = v => '₹'+(v/1000).toFixed(0)+'K';
+
+// ═══════════ NAVIGATION ═══════════
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+  document.getElementById('scrollArea').scrollTop = 0;
+}
+
+// ═══════════ RENDER ═══════════
+function renderAll() {
+  renderHome();
+  renderDebt();
+  renderPortfolio();
+  renderGoals();
+  renderUpload();
+}
+
+// ── HOME ──
+function renderHome() {
+  document.getElementById('scoreNum').textContent = state.cibil > 800 ? 68 : state.cibil > 776 ? 60 : 54;
+  document.getElementById('incomeKPI').textContent = fmt(state.income);
+  document.getElementById('portKPI').textContent = fmt(state.portfolio);
+  document.getElementById('cibilKPI').textContent = state.cibil;
+
+  // Alloc bar
+  const total = holdings.reduce((s,h)=>s+h.val,0);
+  const ab = document.getElementById('homeAllocBar');
+  const al = document.getElementById('homeAllocLeg');
+  ab.innerHTML=''; al.innerHTML='';
+  holdings.slice(0,7).forEach(h=>{
+    const pct=(h.val/total*100).toFixed(1);
+    ab.innerHTML+=`<div class="alloc-seg" style="width:${pct}%;background:${h.color}">${pct>10?pct+'%':''}</div>`;
+    al.innerHTML+=`<div style="display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:8px;color:var(--sub)"><div style="width:6px;height:6px;border-radius:1px;background:${h.color}"></div>${h.name.split(' ').slice(0,2).join(' ')}</div>`;
+  });
+
+  // Cashflow donut
+  const cd = document.getElementById('cashDonut');
+  if(cd._c) cd._c.destroy();
+  cd._c = new Chart(cd,{type:'doughnut',data:{labels:['EMIs','SIP','Rent','Free'],datasets:[{data:[37576,state.sip,25000,Math.max(0,state.income-37576-state.sip-25000)],backgroundColor:['#ff5370','#4d9fff','#fb923c','#00e5a0'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:true,position:'right',labels:{color:'#7c8299',font:{size:10},boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>`₹${ctx.raw.toLocaleString('en-IN')}`}}}}});
+
+  // Goals
+  const goals = [
+    {name:'Close SMICC loan',  pct:0,  due:'Jun 26', c:'var(--green)'},
+    {name:'Start new job 32LPA',pct:0, due:'Jul 26',  c:'var(--blue)'},
+    {name:'Kill SBI 15% loan', pct:0,  due:'Aug 26',  c:'var(--red)'},
+    {name:'Kill GrowwCred',    pct:0,  due:'Oct 26',  c:'var(--amber)'},
+    {name:'Debt-free (ex-Canara)',pct:0,due:'Apr 27', c:'var(--purple)'},
+    {name:'SIP at ₹90K/month', pct:Math.round(state.sip/90000*100), due:'Apr 27', c:'var(--blue)'},
+    {name:'Wedding fund ₹35L', pct:0,  due:'Dec 27',  c:'var(--pink)'},
+    {name:'CIBIL score 820+',  pct:Math.round((state.cibil-300)/(820-300)*100), due:'Apr 27', c:'var(--amber)'},
+  ];
+  const gg = document.getElementById('homeGoals');
+  gg.innerHTML='';
+  goals.forEach(g=>{
+    gg.innerHTML+=`<div class="prog-row">
+      <div class="prog-lbl">${g.name}</div>
+      <div class="prog-track"><div class="prog-fill" style="width:${Math.min(100,g.pct)}%;background:${g.c}"></div></div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--sub);min-width:42px;text-align:right">${g.due}</div>
+    </div>`;
+  });
+}
+
+// ── DEBT ──
+function renderDebt() {
+  const ll = document.getElementById('loanList');
+  ll.innerHTML='';
+  [...loans].sort((a,b)=>b.rate-a.rate).forEach(l=>{
+    const pct=Math.round((1-l.bal/l.orig)*100);
+    const rc=l.rate>=14?'var(--red)':l.rate>=10?'var(--amber)':'var(--green)';
+    const pill=l.priority===0?'<span class="pill p-g">KEEP</span>':l.priority===1?'<span class="pill p-r">PAY NOW</span>':l.priority===2?'<span class="pill p-r">KILL 1st</span>':l.priority===3?'<span class="pill p-a">KILL 2nd</span>':'<span class="pill p-b">EMI only</span>';
+    ll.innerHTML+=`<div class="loan-item">
+      <div class="loan-top">
+        <div class="loan-name">${l.name}</div>
+        <div style="display:flex;align-items:center;gap:6px">${pill}<div class="loan-rate" style="color:${rc}">${l.rate}%</div></div>
+      </div>
+      <div class="loan-bar-wrap">
+        <div class="loan-track"><div class="loan-fill" style="width:${pct}%;background:${l.color}"></div></div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--sub)">${pct}% paid</div>
+      </div>
+      <div class="loan-bottom">
+        <div class="loan-bal">${fmt(l.bal)} remaining</div>
+        <div class="loan-emi">EMI ${fmt(l.emi)}/mo · Closes ${l.close}</div>
+      </div>
+    </div>`;
+  });
+
+  // Debt chart
+  const dc = document.getElementById('debtChart');
+  if(dc._c) dc._c.destroy();
+  const mo=['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+  dc._c=new Chart(dc,{type:'line',data:{labels:mo,datasets:[
+    {label:'SBI',     data:[125662,118862,55000,0,0,0,0,0,0,0,0,0],           borderColor:'#ff5370',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.2},
+    {label:'GrowwCred',data:[189792,181292,172000,162000,152000,90000,0,0,0,0,0,0],borderColor:'#fb923c',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.2},
+    {label:'HSBC',    data:[168460,160460,151000,142000,133000,124000,115000,105000,0,0,0,0],borderColor:'#9d7aff',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.2},
+    {label:'HDFC',    data:[239208,234708,230000,225000,220000,215000,210000,205000,195000,180000,50000,0],borderColor:'#4d9fff',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.2},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#7c8299',font:{size:9},boxWidth:10,padding:6}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9},callback:v=>fmt(v)}}}}});
+
+  // Month tabs
+  const mt=document.getElementById('debtMonthTabs');
+  const months=['May 26','Jun 26','Jul 26','Aug 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Feb 27','Mar 27','Apr 27'];
+  mt.innerHTML='';
+  months.forEach((m,i)=>{mt.innerHTML+=`<div class="month-tab ${i===0?'active':''}" onclick="selectDebtMonth(${i})">${m}</div>`;});
+  selectDebtMonth(0);
+}
+
+function selectDebtMonth(idx){
+  document.querySelectorAll('#debtMonthTabs .month-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  const income=[143000,143000,195000,195000,195000,195000,195000,195000,195000,195000,195000,195000][idx];
+  const emis=[37576,34076,34076,27276,27276,18776,18776,18776,9500,5000,1166,1166][idx];
+  const sips=[40148,40148,60924,67724,47724,56224,56224,56224,65500,90000,90000,110000][idx];
+  const surplus=income-25000-(idx>=2?25000:0)-emis-sips;
+  const events=['Pay SMICC ₹6,895 this week','Hold — transition to new job','💼 New job! SIP → ₹61K','SBI CLOSED ✓','Avalanche at GrowwCred','GrowwCred CLOSED ✓','Building emergency fund','Emergency fund ₹2L','HSBC CLOSED ✓','HDFC CLOSED ✓ — EF done','All PLs dead!','DEBT FREE 🎉'][idx];
+  const dd=document.getElementById('debtMonthDetail');
+  dd.innerHTML=`<div class="kpi-grid" style="margin-bottom:8px">
+    <div class="kpi"><div class="kpi-l">Income</div><div class="kpi-v" style="color:${idx<2?'var(--amber)':'var(--blue)'};font-size:14px">${fmt(income)}</div></div>
+    <div class="kpi"><div class="kpi-l">EMIs</div><div class="kpi-v" style="color:var(--red);font-size:14px">${fmt(emis)}</div></div>
+    <div class="kpi"><div class="kpi-l">SIP</div><div class="kpi-v" style="color:var(--blue);font-size:14px">${fmt(sips)}</div></div>
+    <div class="kpi"><div class="kpi-l">Surplus</div><div class="kpi-v" style="color:var(--green);font-size:14px">${fmt(Math.max(0,surplus))}</div></div>
+  </div>
+  <div class="alert good" style="margin-bottom:0"><div class="alert-icon">→</div><div>${events}</div></div>`;
+}
+
+// ── PORTFOLIO ──
+function renderPortfolio() {
+  const total=holdings.reduce((s,h)=>s+h.val,0);
+  document.getElementById('portValKPI').textContent=fmt(total);
+
+  // Pie
+  const pp=document.getElementById('portPie');
+  if(pp._c) pp._c.destroy();
+  const mfV=holdings.filter(h=>h.type==='MF').reduce((s,h)=>s+h.val,0);
+  const etfV=holdings.filter(h=>h.type==='ETF').reduce((s,h)=>s+h.val,0);
+  const stV=holdings.filter(h=>h.type==='Stock').reduce((s,h)=>s+h.val,0);
+  pp._c=new Chart(pp,{type:'doughnut',data:{labels:['Mutual Funds','ETFs','Stocks'],datasets:[{data:[mfV,etfV,stV],backgroundColor:['#4d9fff','#9d7aff','#ffb930'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:true,position:'right',labels:{color:'#7c8299',font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}}}});
+
+  const hl=document.getElementById('holdingsList');
+  hl.innerHTML='';
+  holdings.forEach(h=>{
+    const rc=h.ret>=0?'var(--green)':'var(--red)';
+    const action=h.name.includes('RHF')?'<span class="pill p-r">EXIT</span>':h.name.includes('AWL')?'<span class="pill p-a">HOLD</span>':h.name.includes('NASDAQ')?'<span class="pill p-g">STRONG</span>':'<span class="pill p-b">HOLD</span>';
+    hl.innerHTML+=`<div class="holding-item">
+      <div class="holding-dot" style="background:${h.color}"></div>
+      <div class="holding-info">
+        <div class="holding-name">${h.name}</div>
+        <div class="holding-type">${h.type} · ${action}</div>
+      </div>
+      <div class="holding-right">
+        <div class="holding-val">${fmt(h.val)}</div>
+        <div class="holding-ret" style="color:${rc}">${h.ret>=0?'+':''}${h.ret}%</div>
+      </div>
+    </div>`;
+  });
+}
+
+// ── GOALS ──
+function renderGoals() {
+  const sl=document.getElementById('sipRampList');
+  sl.innerHTML='';
+  sipSteps.forEach(s=>{
+    sl.innerHTML+=`<div class="sip-item">
+      <div class="sip-dot" style="background:${s.color}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:500">${s.month}</div>
+        <div style="font-size:10px;color:var(--sub)">${s.event}</div>
+      </div>
+      <div style="font-family:var(--syne);font-size:14px;font-weight:700;color:${s.color}">₹${(s.sip/1000).toFixed(0)}K</div>
+    </div>`;
+  });
+
+  // SIP chart
+  const sc=document.getElementById('sipChart');
+  if(sc._c) sc._c.destroy();
+  const mo=['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+  const sv=[40148,40148,60924,67724,47724,56224,56224,56224,65500,90000,90000,110000];
+  sc._c=new Chart(sc,{type:'bar',data:{labels:mo,datasets:[{data:sv,backgroundColor:sv.map(v=>v>=90000?'#00e5a0':v>=60000?'#4d9fff':'#ffb930'),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`₹${ctx.raw.toLocaleString('en-IN')}`}}},scales:{x:{grid:{display:false},ticks:{color:'#3d4259',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9},callback:v=>'₹'+(v/1000).toFixed(0)+'K'}}}}});
+
+  // Projection chart
+  const pc=document.getElementById('projChart');
+  if(pc._c) pc._c.destroy();
+  function fvs(sip,r,m,c0){const mr=r/1200;let v=c0;for(let i=0;i<m;i++)v=v*(1+mr)+sip;return Math.round(v);}
+  const mo2=[0,12,24,36,48,60,72,84,96,108,120];
+  const lbls=mo2.map(m=>m===0?'Now':`Yr${m/12}`);
+  pc._c=new Chart(pc,{type:'line',data:{labels:lbls,datasets:[
+    {label:'₹110K ramp',data:mo2.map(m=>fvs(110000,13.5,m,413066)),borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,.07)',borderWidth:2,pointRadius:2,fill:true,tension:.4},
+    {label:'₹90K job',  data:mo2.map(m=>fvs(90000,13.5,m,413066)), borderColor:'#4d9fff',backgroundColor:'rgba(77,159,255,.05)',borderWidth:1.5,borderDash:[5,3],pointRadius:2,fill:true,tension:.4},
+    {label:'₹40K now',  data:mo2.map(m=>fvs(40148,13.5,m,413066)), borderColor:'#ffb930',backgroundColor:'transparent',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,tension:.4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#7c8299',font:{size:9},boxWidth:10,padding:6}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4259',font:{size:9},callback:v=>fmt(v)}}}}});
+
+  // Timeline
+  const tl=document.getElementById('roadmapTL');
+  const tlData=[
+    {m:'May 2026',  cls:'active', title:'Pay SMICC ₹6,895',      sub:'Frees ₹3,500/mo EMI instantly.'},
+    {m:'Jul 2026',  cls:'future', title:'New job 32LPA starts',    sub:'Income jumps to ₹1,95,000/month.'},
+    {m:'Aug 2026',  cls:'future', title:'SBI (15%) CLOSED',        sub:'₹6,800 EMI freed → SIP boost.'},
+    {m:'Oct 2026',  cls:'future', title:'GrowwCred CLOSED',        sub:'₹8,500 EMI freed. DTI drops to 9%.'},
+    {m:'Feb 2027',  cls:'future', title:'HDFC + HSBC CLOSED',      sub:'SIP hits ₹90,000/month.'},
+    {m:'Apr 2027',  cls:'future', title:'DEBT FREE 🎉',            sub:'SIP ₹1,10,000/mo. CIBIL 820+.'},
+    {m:'Dec 2027',  cls:'wedding',title:'Wedding ₹35L deployed',   sub:'₹15L saved + ₹12L redeemed + ₹8L loan.'},
+    {m:'2036',      cls:'future', title:'₹22.9Cr corpus target',   sub:'Age 38. Financially independent.'},
+  ];
+  tl.innerHTML='';
+  tlData.forEach(t=>{tl.innerHTML+=`<div class="tl-item"><div class="tl-dot ${t.cls}"></div><div class="tl-month">${t.m}</div><div class="tl-title">${t.title}</div><div class="tl-sub">${t.sub}</div></div>`;});
+}
+
+// ── UPLOAD ──
+function renderUpload() {
+  const uh=document.getElementById('uploadHistory');
+  uh.innerHTML='';
+  if(!state.uploads.length){uh.innerHTML='<div style="font-size:12px;color:var(--sub);text-align:center;padding:16px">No uploads yet</div>';return;}
+  state.uploads.forEach(u=>{
+    uh.innerHTML+=`<div class="upload-item">
+      <div style="font-size:18px">${u.type==='CIBIL'?'📊':'📈'}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.name}</div><div style="font-family:var(--mono);font-size:9px;color:var(--sub)">${u.date}</div></div>
+      <div style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:var(--gd);color:var(--green)">${u.status}</div>
+    </div>`;
+  });
+}
+
+// ═══════════ UPLOAD HANDLERS ═══════════
+function triggerUpload(type){document.getElementById('upload-'+type).click();}
+function handleFile(e,type){
+  const file=e.target.files[0];
+  if(!file)return;
+  const now=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  state.uploads.unshift({name:file.name,date:now,type,status:'Processing...'});
+  saveState(); renderUpload();
+  showToast('Processing '+file.name+'...');
+  setTimeout(()=>{
+    state.uploads[0].status='Processed';
+    state.lastSync=now;
+    document.getElementById('syncBadge').textContent='● LIVE';
+    saveState(); renderUpload();
+    showToast('✓ '+type+' report updated');
+  },2000);
+}
+
+// ═══════════ MANUAL UPDATE ═══════════
+function applyUpdate(){
+  const c=parseInt(document.getElementById('mCIBIL').value);
+  const p=parseInt(document.getElementById('mPort').value);
+  const s=parseInt(document.getElementById('mSIP').value);
+  const inc=parseInt(document.getElementById('mIncome').value);
+  if(!isNaN(c)&&c>=300&&c<=900) state.cibil=c;
+  if(!isNaN(p)&&p>0) state.portfolio=p;
+  if(!isNaN(s)&&s>0) state.sip=s;
+  if(!isNaN(inc)&&inc>0) state.income=inc;
+  saveState(); renderAll();
+  showToast('✓ Data updated across all panels');
+  showPanel('home');
+}
+function resetData(){
+  state={...DEFAULTS,uploads:[...DEFAULTS.uploads]};
+  saveState(); renderAll();
+  document.getElementById('mCIBIL').value='';
+  document.getElementById('mPort').value='';
+  document.getElementById('mSIP').value='';
+  document.getElementById('mIncome').value='';
+  showToast('↺ Reset to default values');
+}
+
+// ═══════════ TOAST ═══════════
+function showToast(msg){
+  let t=document.querySelector('.toast');
+  if(t) t.remove();
+  t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.classList.add('hide');setTimeout(()=>t.remove(),400);},2500);
+}
+
+// ═══════════ SERVICE WORKER ═══════════
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(()=>{
+      console.log('WealthOS service worker registered');
+    }).catch(()=>{});
+  });
+}
+
+// ═══════════ INIT ═══════════
+renderAll();
+</script>
+</body>
+</html>
